@@ -316,16 +316,21 @@ class SmartIdentifier(_PluginBase):
         ], {
             "enabled": False,
             "separator": ".",
-            "separator_types": ["audioCodec", "videoCodec", "videoFormat", "edition", "effect",
-                                "resourceType"],
-            "custom_separator": "@",
-            "word_replacements": """(?i)(?<=[\W_])BluRay.REMUX(?=[\W_]) => REMUX
+            "separator_types": ["title", "en_title", "resourceType", "effect", "edition", "videoFormat", "videoCodec", "audioCodec"],
+            "custom_separator": ".",
+            "word_replacements": """：\. => ：
+(?i)(?<=[\W_])BluRay.REMUX(?=[\W_]) => REMUX
 (?i)(?<=[\W_])HDR.DV(?=[\W_]) => DoVi.HDR
 (?i)(?<=[\W_])DV(?=[\W_]) => DoVi
+(?i)(?<=[\W_])4k(?=[\W_]) => 2160p
+(?i)(?<=[\W_])1080p(?=[\W_]) => 1080p
 (?i)(?<=[\W_])H264(?=[\W_]) => x264
 (?i)(?<=[\W_])h265(?=[\W_]) => x265
 (?i)(?<=[\W_])NF(?=[\W_]) => Netflix
 (?i)(?<=[\W_])AMZN(?=[\W_]) => Amazon
+(?i)(?<=[\W_])BluRay(?=[\W_]) => BluRay
+(?i)(?<=[\W_])WEB-DL(?=[\W_]) => WEB-DL
+(?i)(?<=[\W_])Disc(?=[\W_]) => part
 (?i)\.Atmos(?=\W) => """
         }
 
