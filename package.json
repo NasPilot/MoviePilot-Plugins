@@ -1,9 +1,9 @@
 {
   "SmartIdentifier": {
     "name": "智能识别词",
-    "description": "增强媒体识别功能",
+    "description": "增强媒体识别功能，从整理记录中提取识别词。",
     "labels": "识别, 订阅",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/identifier.png",
     "author": "NasPilot",
     "level": 1,

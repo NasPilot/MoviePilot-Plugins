@@ -20,11 +20,11 @@ class SmartIdentifier(_PluginBase):
     # 插件名称
     plugin_name = "智能识别词"
     # 插件描述
-    plugin_desc = "自动从整理记录中提取识别词，辅助用户进行媒体识别。"
+    plugin_desc = "增强媒体识别功能，从整理记录中提取识别词。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/identifier.png"
     # 插件版本
-    plugin_version = "0.1.0"
+    plugin_version = "0.1.1"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
