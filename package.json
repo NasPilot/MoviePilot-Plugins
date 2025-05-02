@@ -1,0 +1,10 @@
+{
+  "smartidentifiers": {
+    "name": "智能识别词",
+    "description": "增强媒体识别功能",
+    "version": "0.0.1",
+    "icon": "identifiers.png",
+    "author": "NasPilot",
+    "level": 1
+  }
+}
