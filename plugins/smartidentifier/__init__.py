@@ -1,8 +1,6 @@
 import copy
 import threading
 from typing import Any, Dict, List, Tuple, Optional
-from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 
 from jinja2 import Template
 
@@ -14,6 +12,9 @@ from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.event import TransferRenameEventData
 from app.schemas.types import ChainEventType
+
+lock = threading.Lock()
+
 
 class SmartIdentifier(_PluginBase):
     # 插件名称
@@ -35,209 +36,62 @@ class SmartIdentifier(_PluginBase):
     # 可使用的用户级别
     auth_level = 1
 
-    # 线程锁
-    _lock = threading.Lock()
-    # 线程池
-    _thread_pool = ThreadPoolExecutor(max_workers=4)
-    # 缓存装饰器
-    _cache = lru_cache(maxsize=1000)
+    # region 私有属性
+    # 是否开启
+    _enabled = False
+    # 默认分隔符
+    _separator: Optional[str] = None
+    # 分隔符适用范围
+    _separator_types: Optional[list] = None
+    # 各字段的分隔符字典，按需配置不同字段的分隔符
+    _field_separators: Optional[Dict[str, str]] = None
+    # 自定义替换词
+    _word_replacements: Optional[list] = []
+    # 自定义重命名模板
+    _template_groups: Optional[dict] = {}
+    # 自定义占位符分隔符
+    _custom_separator: Optional[str] = "@"
 
-    def __init__(self):
-        super().__init__()
-        self._enabled = False
-        self._separator = None
-        self._separator_types = None
-        self._field_separators = None
-        self._word_replacements = []
-        self._template_groups = {}
-        self._custom_separator = "@"
-        self._cache_enabled = True
-        self._cache_ttl = 3600
+    # endregion
 
     def init_plugin(self, config: dict = None):
-        """初始化插件"""
         if not config:
             return
 
-        try:
-            with self._lock:
-                self._enabled = config.get("enabled", False)
-                self._separator = config.get("separator")
-                self._separator_types = config.get("separator_types")
-                self._word_replacements = self.__parse_replacement_rules(config.get("word_replacements"))
-                self._template_groups = self.__parse_template_groups(config.get("template_groups"))
-                self._custom_separator = config.get("custom_separator", "@")
-                self._cache_enabled = config.get("cache_enabled", True)
-                self._cache_ttl = config.get("cache_ttl", 3600)
-                
-                # 初始化自定义匹配器
-                CustomizationMatcher().custom_separator = self._custom_separator
-                
-                # 清除缓存
-                self._clear_cache()
-                
-                logger.info("插件初始化完成")
-        except Exception as e:
-            logger.error(f"插件初始化失败: {str(e)}")
-            raise
+        self._enabled = config.get("enabled") or False
+        self._separator = config.get("separator")
+        self._separator_types = config.get("separator_types")
+        self._word_replacements = self.__parse_replacement_rules(config.get("word_replacements"))
+        self._template_groups = self.__parse_template_groups(config.get("template_groups"))
+        self._custom_separator = config.get("custom_separator") or "@"
+        CustomizationMatcher().custom_separator = self._custom_separator
 
-    def _clear_cache(self):
-        """清除缓存"""
-        self._cache.cache_clear()
-
-    @_cache
-    def _get_template(self, template_string: str) -> Template:
-        """获取模板对象（带缓存）"""
-        return Template(template_string)
-
-    @eventmanager.register(ChainEventType.TransferRename)
-    def handle_transfer_rename(self, event: Event):
-        """处理重命名事件"""
-        if not event or not event.event_data:
-            return
-
-        event_data: TransferRenameEventData = event.event_data
-        
-        if event_data.updated:
-            logger.debug("该事件已被其他事件处理器处理，跳过后续操作")
-            return
-
-        try:
-            # 使用线程池处理重命名任务
-            future = self._thread_pool.submit(self._process_rename, event_data)
-            future.add_done_callback(self._handle_rename_result)
-        except Exception as e:
-            logger.error(f"处理重命名事件失败: {str(e)}")
-
-    def _process_rename(self, event_data: TransferRenameEventData) -> Tuple[bool, str]:
-        """处理重命名逻辑"""
-        try:
-            template_string = event_data.template_string
-            rename_dict = copy.deepcopy(event_data.rename_dict)
-            
-            # 获取媒体信息
-            mediainfo: MediaInfo = rename_dict.get("__mediainfo__")
-            if mediainfo:
-                # 处理二级分类模板
-                if category := mediainfo.category:
-                    if category_template := self._template_groups.get(category):
-                        template_string = category_template
-                        logger.debug(f"应用二级分类模板: {category} -> {template_string}")
-                
-                # 处理TMDB模板
-                if tmdb_id := mediainfo.tmdb_id:
-                    if tmdb_template := self._template_groups.get(str(tmdb_id)):
-                        template_string = tmdb_template
-                        logger.debug(f"应用TMDB模板: {tmdb_id} -> {template_string}")
-
-            # 执行重命名
-            updated_str = self.rename(template_string, rename_dict) or event_data.render_str
-            
-            # 应用词语替换
-            if self._word_replacements:
-                updated_str, applied_words = WordsMatcher().prepare(
-                    title=updated_str,
-                    custom_words=self._word_replacements
-                )
-                logger.debug(f"应用词语替换: {applied_words}")
-
-            return updated_str != event_data.render_str, updated_str
-            
-        except Exception as e:
-            logger.error(f"处理重命名失败: {str(e)}")
-            return False, event_data.render_str
-
-    def _handle_rename_result(self, future):
-        """处理重命名结果"""
-        try:
-            updated, new_str = future.result()
-            if updated:
-                event_data = future.event_data
-                event_data.updated_str = new_str
-                event_data.updated = True
-                event_data.source = self.plugin_name
-                logger.info(f"重命名完成: {event_data.render_str} -> {new_str}")
-        except Exception as e:
-            logger.error(f"处理重命名结果失败: {str(e)}")
-
-    def rename(self, template_string: str, rename_dict: dict) -> Optional[str]:
-        """执行重命名"""
-        if not self._separator_types or not self._separator:
-            return None
-
-        try:
-            # 更新字段值
-            updated = False
-            for field, value in rename_dict.items():
-                if field not in self._separator_types:
-                    continue
-                    
-                if new_value := self.modify_field(field, value, self._separator_types):
-                    rename_dict[field] = new_value
-                    updated = True
-                    logger.debug(f"更新字段: {field} -> {new_value}")
-
-            if not updated:
-                return None
-
-            # 渲染模板
-            template = self._get_template(template_string)
-            return template.render(rename_dict)
-            
-        except Exception as e:
-            logger.error(f"重命名失败: {str(e)}")
-            return None
-
-    def modify_field(self, field: str, value: str, separator_types: list) -> Optional[str]:
-        """修改字段值"""
-        if not value or field not in separator_types:
-            return None
-
-        try:
-            if isinstance(value, str):
-                parts = value.split()
-                separator = self._field_separators.get(field, self._separator) if self._field_separators else self._separator
-                new_value = separator.join(parts) if separator else value
-                return new_value if new_value != value else None
-        except Exception as e:
-            logger.error(f"修改字段失败: {field} -> {str(e)}")
-            
-        return None
+    def get_state(self) -> bool:
+        return self._enabled
 
     @staticmethod
-    def __parse_replacement_rules(replacement_str: str) -> List[str]:
-        """解析替换规则"""
-        if not replacement_str:
-            return []
+    def get_command() -> List[Dict[str, Any]]:
+        """
+        定义远程控制命令
+        :return: 命令关键字、事件、描述、附带数据
+        """
+        pass
 
-        try:
-            return [
-                line.strip() for line in replacement_str.splitlines()
-                if line.strip() and not line.startswith("#")
-            ]
-        except Exception as e:
-            logger.error(f"解析替换规则失败: {str(e)}")
-            return []
-
-    @staticmethod
-    def __parse_template_groups(template_group_str: Optional[str]) -> Dict[str, str]:
-        """解析模板组"""
-        if not template_group_str:
-            return {}
-
-        try:
-            return {
-                category.strip(): template.strip()
-                for line in template_group_str.split("\n")
-                if not line.startswith("#") and (parts := line.split(":", 1)) and len(parts) == 2
-                for category, template in [parts]
-            }
-        except Exception as e:
-            logger.error(f"解析模板组失败: {str(e)}")
-            return {}
+    def get_api(self) -> List[Dict[str, Any]]:
+        pass
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
-        """获取插件配置表单"""
+        """
+        拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
+        """
+        edition_options = [
+            {"title": "默认", "value": None},
+            {"title": "空格", "value": " "},
+            {"title": "点 (.)", "value": "."},
+            {"title": "横杠 (-)", "value": "-"},
+            {"title": "下划线 (_)", "value": "_"}
+        ]
+
         return [
             {
                 'component': 'VForm',
@@ -247,7 +101,10 @@ class SmartIdentifier(_PluginBase):
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12, 'md': 6},
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
                                 'content': [
                                     {
                                         'component': 'VSwitch',
@@ -267,7 +124,10 @@ class SmartIdentifier(_PluginBase):
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12, 'md': 6},
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
                                 'content': [
                                     {
                                         'component': 'VTextField',
@@ -282,7 +142,10 @@ class SmartIdentifier(_PluginBase):
                             },
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12, 'md': 6},
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
                                 'content': [
                                     {
                                         'component': 'VTextField',
@@ -302,7 +165,9 @@ class SmartIdentifier(_PluginBase):
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12},
+                                'props': {
+                                    'cols': 12
+                                },
                                 'content': [
                                     {
                                         'component': 'VSelect',
@@ -339,7 +204,9 @@ class SmartIdentifier(_PluginBase):
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12},
+                                'props': {
+                                    'cols': 12
+                                },
                                 'content': [
                                     {
                                         'component': 'VTextarea',
@@ -347,7 +214,7 @@ class SmartIdentifier(_PluginBase):
                                             'model': 'word_replacements',
                                             'label': '自定义替换词',
                                             'rows': 5,
-                                            'placeholder': '每行输入一条替换规则，格式：被替换词 => 替换词',
+                                            "placeholder": "每行输入一条替换规则，格式：被替换词 => 替换词",
                                             'hint': '定义替换规则，重命名后会自动进行词语替换',
                                             'persistent-hint': True
                                         }
@@ -361,7 +228,9 @@ class SmartIdentifier(_PluginBase):
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12},
+                                'props': {
+                                    'cols': 12
+                                },
                                 'content': [
                                     {
                                         'component': 'VTextarea',
@@ -369,7 +238,9 @@ class SmartIdentifier(_PluginBase):
                                             'model': 'template_groups',
                                             'label': '自定义重命名模板',
                                             'rows': 5,
-                                            'placeholder': '每行输入一条重命名模板，格式：\n二级分类名称:重命名模板\nTMDBID:重命名模板',
+                                            "placeholder": "每行输入一条重命名模板，格式：\n"
+                                                           "二级分类名称:重命名模板\n"
+                                                           "TMDBID:重命名模板",
                                             'hint': '定义重命名模板，覆盖默认的重命名模板',
                                             'persistent-hint': True
                                         }
@@ -383,32 +254,58 @@ class SmartIdentifier(_PluginBase):
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12, 'md': 6},
+                                'props': {
+                                    'cols': 12,
+                                },
                                 'content': [
                                     {
-                                        'component': 'VSwitch',
+                                        'component': 'VAlert',
                                         'props': {
-                                            'model': 'cache_enabled',
-                                            'label': '启用缓存',
-                                            'hint': '开启后可以提升性能，但可能会占用更多内存',
-                                            'persistent-hint': True
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '注意：重置插件后即可恢复相关示例配置'
                                         }
                                     }
                                 ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'props': {
+                            'style': {
+                                'margin-top': '12px'
                             },
+                        },
+                        'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12, 'md': 6},
+                                'props': {
+                                    'cols': 12,
+                                },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
+                                        'component': 'VAlert',
                                         'props': {
-                                            'model': 'cache_ttl',
-                                            'label': '缓存时间(秒)',
-                                            'type': 'number',
-                                            'hint': '缓存的有效期，单位为秒',
-                                            'persistent-hint': True
-                                        }
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '注意：智能重命名相关细节，请查阅 '
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'a',
+                                                'props': {
+                                                    'href': 'https://wiki.movie-pilot.org/zh/advanced',
+                                                    'target': '_blank'
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'u',
+                                                        'text': '自定义重命名'
+                                                    }
+                                                ]
+                                            }
+                                        ]
                                     }
                                 ]
                             }
@@ -421,8 +318,6 @@ class SmartIdentifier(_PluginBase):
             "separator": ".",
             "separator_types": ["title", "en_title", "resourceType", "effect", "edition", "videoFormat", "videoCodec", "audioCodec"],
             "custom_separator": ".",
-            "cache_enabled": True,
-            "cache_ttl": 3600,
             "word_replacements": """：\. => ：
 (?i)(?<=[\W_])BluRay.REMUX(?=[\W_]) => REMUX
 (?i)(?<=[\W_])HDR.DV(?=[\W_]) => DoVi.HDR
@@ -438,3 +333,198 @@ class SmartIdentifier(_PluginBase):
 (?i)(?<=[\W_])Disc(?=[\W_]) => part
 (?i)\.Atmos(?=\W) => """
         }
+
+    def get_page(self) -> List[dict]:
+        pass
+
+    def get_service(self) -> List[Dict[str, Any]]:
+        """
+        注册插件公共服务
+        [{
+            "id": "服务ID",
+            "name": "服务名称",
+            "trigger": "触发器：cron/interval/date/CronTrigger.from_crontab()",
+            "func": self.xxx,
+            "kwargs": {} # 定时器参数
+        }]
+        """
+        pass
+
+    def stop_service(self):
+        """
+        退出插件
+        """
+        pass
+
+    @eventmanager.register(ChainEventType.TransferRename)
+    def handle_transfer_rename(self, event: Event):
+        """
+        处理 TransferRename 事件
+        :param event: 事件数据
+        """
+        if not event or not event.event_data:
+            return
+
+        event_data: TransferRenameEventData = event.event_data
+
+        logger.info(f"处理 TransferRename 事件 - {event_data}")
+
+        if event_data.updated:
+            logger.debug(f"该事件已被其他事件处理器处理，跳过后续操作")
+            return
+
+        try:
+            # 调用智能重命名方法
+            logger.debug(f"开始智能重命名处理，原始值：{event_data.render_str}")
+
+            template_string = event_data.template_string
+
+            mediainfo: MediaInfo = event_data.rename_dict.get("__mediainfo__")
+            if not mediainfo:
+                logger.info("没有获取到媒体信息，跳过自定义重命名格式处理")
+            else:
+                # 二级分类
+                category = mediainfo.category
+                if category:
+                    category_template_str = self._template_groups.get(category)
+                    if category_template_str:
+                        template_string = category_template_str
+                        logger.debug(f"检测到二级分类：{category}，应用模板：{template_string}")
+                # TMDB
+                tmdb_id = mediainfo.tmdb_id
+                if tmdb_id:
+                    tmdb_template_str = self._template_groups.get(str(tmdb_id))
+                    if tmdb_template_str:
+                        template_string = tmdb_template_str
+                        logger.debug(f"检测到TMDB ID：{tmdb_id}，应用模板：{template_string}")
+
+            # 最终的模板字符串
+            logger.debug(f"最终模板字符串：{template_string}")
+
+            updated_str = self.rename(template_string=template_string,
+                                      rename_dict=copy.deepcopy(event_data.rename_dict)) or event_data.render_str
+
+            # 调用替换词
+            if self._word_replacements:
+                updated_str, apply_words = WordsMatcher().prepare(title=updated_str,
+                                                                  custom_words=self._word_replacements)
+                logger.debug(f"完成词语替换，应用的替换词: {apply_words}，替换后字符串：{updated_str}")
+
+            # 仅在智能重命名有实际更新时，标记更新状态
+            if updated_str and updated_str != event_data.render_str:
+                event_data.updated_str = updated_str
+                event_data.updated = True
+                event_data.source = self.plugin_name
+                logger.info(f"重命名完成，{event_data.render_str} -> {updated_str}")
+            else:
+                logger.debug(f"重命名结果与原始值相同，跳过更新")
+        except Exception as e:
+            logger.error(f"重命名发生未知异常: {e}", exc_info=True)
+
+    def rename(self, template_string: str, rename_dict: dict) -> Optional[str]:
+        """
+        智能重命名
+        :param template_string: Jinja2 模板字符串
+        :param rename_dict: 渲染上下文，用于替换模板中的变量
+        :return: 生成的完整字符串
+        """
+        if not self._separator_types or not self._separator:
+            return None
+
+        logger.debug(f"Initial rename_dict: {rename_dict}")
+
+        # 检查并更新
+        updated = False
+        # 遍历所有字段，根据需要修改
+        for field, value in rename_dict.items():
+            if field not in self._separator_types:
+                continue
+            updated_value = self.modify_field(field, value, self._separator_types)
+
+            if updated_value is not None and updated_value != value:
+                rename_dict[field] = updated_value
+                updated = True
+                logger.debug(f"字段 {field} : {value} -> {updated_value}")
+
+        # 如果没有任何字段被修改，直接返回 None
+        if not updated:
+            return None
+
+        # 创建 jinja2 模板对象
+        template = Template(template_string)
+        # 渲染生成的字符串
+        return template.render(rename_dict)
+
+    def modify_field(self, field: str, value: str, separator_types: list) -> Optional[str]:
+        """
+        修改字段内容，使用指定的分隔符进行合并
+        :param field: 字段名
+        :param value: 字段的原始值
+        :param separator_types: 需要处理的分隔符类型列表
+        :return: 修改后的字段值或 None（如果不处理）
+        """
+        if not value or not separator_types:
+            return None
+
+        if isinstance(value, str):
+            parts = value.split()
+
+            # 如果字段不在 separator_types 中，则不做任何修改
+            if field not in separator_types:
+                return None
+
+            # 如果存在该字段的特定分隔符，则使用该分隔符进行处理
+            separator = self._field_separators.get(field,
+                                                   self._separator) if self._field_separators else self._separator
+
+            # 使用选定的分隔符类型进行字段值修改
+            updated_value = separator.join(parts) if separator else value
+
+            # 如果修改后的值与原值不同，返回更新后的值
+            return updated_value if updated_value != value else None
+
+        return None
+
+    @staticmethod
+    def __parse_replacement_rules(replacement_str: str) -> Optional[list]:
+        """
+        将替换规则字符串解析为列表，按行分割
+        """
+        if not replacement_str:
+            return []
+
+        try:
+            if replacement_str:
+                # 将字符串按行分割，并去除空行
+                return [line.lstrip() for line in replacement_str.splitlines()
+                        if line.strip() and not line.startswith("#")]
+            return []
+        except Exception as e:
+            logger.error(f"Error parsing replacement rules: {e}")
+            return []
+
+    @staticmethod
+    def __parse_template_groups(template_group_str: Optional[str]) -> Dict[str, str]:
+        """
+        解析重命名模板规则，将字符串格式的规则解析成字典
+        格式示例：二级分类名称:重命名模板\nTMDBID:重命名模板
+        """
+        if not template_group_str:
+            return {}
+
+        try:
+            template_groups = {}
+            lines = template_group_str.split("\n")
+
+            for line in lines:
+                if line.startswith("#"):
+                    continue
+                parts = line.split(":", 1)
+                if len(parts) == 2:
+                    category, template = parts
+                    template_groups[category.strip()] = template.strip()
+
+            return template_groups
+        except Exception as e:
+            logger.error(f"Error parsing template groups: {e}")
+            return {}
