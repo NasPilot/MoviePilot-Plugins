@@ -7,6 +7,9 @@
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/identifier.png",
     "author": "NasPilot",
     "level": 1,
-    "v2": true
+    "v2": true,
+    "history": {
+      "v1.0.0": "从媒体整理记录提取识别词"
+    }
   }
 }
