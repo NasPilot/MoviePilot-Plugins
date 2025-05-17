@@ -11,5 +11,31 @@
     "history": {
       "v1.0.0": "从媒体整理记录提取识别词"
     }
+  },
+  "P1115StrmHelper": {
+    "name": "115网盘助手",
+    "description": "支持115网盘文件管理和流媒体服务器挂载。",
+    "labels": "网盘, 挂载, 流媒体",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/strmhelper.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "支持115网盘文件管理和流媒体服务器挂载"
+    }
+  },
+  "SmartRename": {
+    "name": "智能重命名",
+    "description": "提供智能文件重命名功能。",
+    "labels": "重命名, 整理",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/rename.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "提供智能文件重命名功能"
+    }
   }
 }
