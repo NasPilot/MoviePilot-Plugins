@@ -61,10 +61,19 @@ class SmartIdentifier(_PluginBase):
         self._enabled = config.get("enabled") or False
         self._separator = config.get("separator")
         self._separator_types = config.get("separator_types")
+        
+        # 解析字段分隔符配置
+        field_separators_str = config.get("field_separators")
+        self._field_separators = self.__parse_field_separators(field_separators_str) if field_separators_str else {}
+        
         self._word_replacements = self.__parse_replacement_rules(config.get("word_replacements"))
         self._template_groups = self.__parse_template_groups(config.get("template_groups"))
         self._custom_separator = config.get("custom_separator") or "@"
         CustomizationMatcher().custom_separator = self._custom_separator
+        
+        # 日志记录初始化配置
+        logger.debug(f"SmartIdentifier插件初始化配置: 启用状态={self._enabled}, 默认分隔符={self._separator}, "
+                    f"分隔符适用范围={self._separator_types}, 字段分隔符={self._field_separators}")
 
     def get_state(self) -> bool:
         return self._enabled
@@ -92,8 +101,7 @@ class SmartIdentifier(_PluginBase):
             {"title": "下划线 (_)", "value": "_"}
         ]
 
-        return [
-            {
+        return [{
                 'component': 'VForm',
                 'content': [
                     {
@@ -153,6 +161,30 @@ class SmartIdentifier(_PluginBase):
                                             'model': 'custom_separator',
                                             'label': '自定义占位符分隔符',
                                             'hint': '请输入 customization 的分隔符，如：. - _ 空格，默认为 @',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'field_separators',
+                                            'label': '字段分隔符配置',
+                                            'rows': 3,
+                                            'placeholder': "每行输入一条字段分隔符配置，格式：字段名:分隔符\n例如：title:.\nen_title:-",
+                                            'hint': '为特定字段配置专用分隔符，优先级高于默认分隔符',
                                             'persistent-hint': True
                                         }
                                     }
@@ -318,6 +350,10 @@ class SmartIdentifier(_PluginBase):
             "separator": ".",
             "separator_types": ["title", "en_title", "resourceType", "effect", "edition", "videoFormat", "videoCodec", "audioCodec"],
             "custom_separator": ".",
+            "field_separators": """title:.
+en_title:-
+videoFormat:_
+audioCodec:.""",
             "word_replacements": """：\. => ：
 (?i)(?<=[\W_])BluRay.REMUX(?=[\W_]) => REMUX
 (?i)(?<=[\W_])HDR.DV(?=[\W_]) => DoVi.HDR
@@ -363,6 +399,12 @@ class SmartIdentifier(_PluginBase):
         :param event: 事件数据
         """
         if not event or not event.event_data:
+            logger.debug("收到空的TransferRename事件，跳过处理")
+            return
+
+        # 如果插件未启用，直接返回
+        if not self._enabled:
+            logger.debug("智能识别词插件未启用，跳过处理")
             return
 
         event_data: TransferRenameEventData = event.event_data
@@ -373,53 +415,68 @@ class SmartIdentifier(_PluginBase):
             logger.debug(f"该事件已被其他事件处理器处理，跳过后续操作")
             return
 
-        try:
-            # 调用智能重命名方法
-            logger.debug(f"开始智能重命名处理，原始值：{event_data.render_str}")
+        # 使用线程锁确保并发安全
+        with lock:
+            try:
+                # 调用智能重命名方法
+                logger.debug(f"开始智能重命名处理，原始值：{event_data.render_str}")
 
-            template_string = event_data.template_string
+                template_string = event_data.template_string
+                if not template_string:
+                    logger.warning("模板字符串为空，无法进行重命名处理")
+                    return
 
-            mediainfo: MediaInfo = event_data.rename_dict.get("__mediainfo__")
-            if not mediainfo:
-                logger.info("没有获取到媒体信息，跳过自定义重命名格式处理")
-            else:
-                # 二级分类
-                category = mediainfo.category
-                if category:
-                    category_template_str = self._template_groups.get(category)
-                    if category_template_str:
-                        template_string = category_template_str
-                        logger.debug(f"检测到二级分类：{category}，应用模板：{template_string}")
-                # TMDB
-                tmdb_id = mediainfo.tmdb_id
-                if tmdb_id:
-                    tmdb_template_str = self._template_groups.get(str(tmdb_id))
-                    if tmdb_template_str:
-                        template_string = tmdb_template_str
-                        logger.debug(f"检测到TMDB ID：{tmdb_id}，应用模板：{template_string}")
+                mediainfo: MediaInfo = event_data.rename_dict.get("__mediainfo__")
+                if not mediainfo:
+                    logger.info("没有获取到媒体信息，跳过自定义重命名格式处理")
+                else:
+                    # 二级分类
+                    category = mediainfo.category
+                    if category:
+                        category_template_str = self._template_groups.get(category)
+                        if category_template_str:
+                            template_string = category_template_str
+                            logger.debug(f"检测到二级分类：{category}，应用模板：{template_string}")
+                    # TMDB
+                    tmdb_id = mediainfo.tmdb_id
+                    if tmdb_id:
+                        tmdb_template_str = self._template_groups.get(str(tmdb_id))
+                        if tmdb_template_str:
+                            template_string = tmdb_template_str
+                            logger.debug(f"检测到TMDB ID：{tmdb_id}，应用模板：{template_string}")
 
-            # 最终的模板字符串
-            logger.debug(f"最终模板字符串：{template_string}")
+                # 最终的模板字符串
+                logger.debug(f"最终模板字符串：{template_string}")
 
-            updated_str = self.rename(template_string=template_string,
-                                      rename_dict=copy.deepcopy(event_data.rename_dict)) or event_data.render_str
+                # 深拷贝重命名字典，避免修改原始数据
+                rename_dict_copy = copy.deepcopy(event_data.rename_dict)
+                if not rename_dict_copy:
+                    logger.warning("重命名字典为空，无法进行重命名处理")
+                    return
 
-            # 调用替换词
-            if self._word_replacements:
-                updated_str, apply_words = WordsMatcher().prepare(title=updated_str,
-                                                                  custom_words=self._word_replacements)
-                logger.debug(f"完成词语替换，应用的替换词: {apply_words}，替换后字符串：{updated_str}")
+                # 执行重命名
+                updated_str = self.rename(template_string=template_string,
+                                          rename_dict=rename_dict_copy) or event_data.render_str
 
-            # 仅在智能重命名有实际更新时，标记更新状态
-            if updated_str and updated_str != event_data.render_str:
-                event_data.updated_str = updated_str
-                event_data.updated = True
-                event_data.source = self.plugin_name
-                logger.info(f"重命名完成，{event_data.render_str} -> {updated_str}")
-            else:
-                logger.debug(f"重命名结果与原始值相同，跳过更新")
-        except Exception as e:
-            logger.error(f"重命名发生未知异常: {e}", exc_info=True)
+                # 调用替换词
+                if self._word_replacements:
+                    try:
+                        updated_str, apply_words = WordsMatcher().prepare(title=updated_str,
+                                                                          custom_words=self._word_replacements)
+                        logger.debug(f"完成词语替换，应用的替换词: {apply_words}，替换后字符串：{updated_str}")
+                    except Exception as word_err:
+                        logger.error(f"词语替换过程发生错误: {word_err}", exc_info=True)
+
+                # 仅在智能重命名有实际更新时，标记更新状态
+                if updated_str and updated_str != event_data.render_str:
+                    event_data.updated_str = updated_str
+                    event_data.updated = True
+                    event_data.source = self.plugin_name
+                    logger.info(f"重命名完成，{event_data.render_str} -> {updated_str}")
+                else:
+                    logger.debug(f"重命名结果与原始值相同，跳过更新")
+            except Exception as e:
+                logger.error(f"重命名发生未知异常: {e}", exc_info=True)
 
     def rename(self, template_string: str, rename_dict: dict) -> Optional[str]:
         """
@@ -429,31 +486,53 @@ class SmartIdentifier(_PluginBase):
         :return: 生成的完整字符串
         """
         if not self._separator_types or not self._separator:
+            logger.warning("分隔符或分隔符适用范围未配置，无法进行重命名")
+            return None
+
+        if not template_string:
+            logger.warning("模板字符串为空，无法进行重命名")
+            return None
+
+        if not rename_dict:
+            logger.warning("重命名字典为空，无法进行重命名")
             return None
 
         logger.debug(f"Initial rename_dict: {rename_dict}")
 
-        # 检查并更新
-        updated = False
-        # 遍历所有字段，根据需要修改
-        for field, value in rename_dict.items():
-            if field not in self._separator_types:
-                continue
-            updated_value = self.modify_field(field, value, self._separator_types)
+        try:
+            # 检查并更新
+            updated = False
+            # 遍历所有字段，根据需要修改
+            for field, value in list(rename_dict.items()):
+                if field not in self._separator_types:
+                    continue
+                    
+                # 跳过None值或非字符串值
+                if value is None or not isinstance(value, str):
+                    logger.debug(f"字段 {field} 的值为 {value}，类型为 {type(value)}，跳过处理")
+                    continue
+                    
+                updated_value = self.modify_field(field, value, self._separator_types)
 
-            if updated_value is not None and updated_value != value:
-                rename_dict[field] = updated_value
-                updated = True
-                logger.debug(f"字段 {field} : {value} -> {updated_value}")
+                if updated_value is not None and updated_value != value:
+                    rename_dict[field] = updated_value
+                    updated = True
+                    logger.debug(f"字段 {field} : {value} -> {updated_value}")
 
-        # 如果没有任何字段被修改，直接返回 None
-        if not updated:
+            # 如果没有任何字段被修改，直接返回 None
+            if not updated:
+                logger.debug("没有字段被修改，跳过重命名")
+                return None
+
+            # 创建 jinja2 模板对象
+            template = Template(template_string)
+            # 渲染生成的字符串
+            result = template.render(rename_dict)
+            logger.debug(f"模板渲染结果: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"重命名过程发生错误: {e}", exc_info=True)
             return None
-
-        # 创建 jinja2 模板对象
-        template = Template(template_string)
-        # 渲染生成的字符串
-        return template.render(rename_dict)
 
     def modify_field(self, field: str, value: str, separator_types: list) -> Optional[str]:
         """
@@ -467,7 +546,12 @@ class SmartIdentifier(_PluginBase):
             return None
 
         if isinstance(value, str):
-            parts = value.split()
+            # 分割字符串为部分，处理多种可能的空白字符
+            parts = [part for part in value.split() if part.strip()]
+            
+            # 如果只有一个部分或为空，则不需要处理
+            if len(parts) <= 1:
+                return None
 
             # 如果字段不在 separator_types 中，则不做任何修改
             if field not in separator_types:
@@ -481,7 +565,9 @@ class SmartIdentifier(_PluginBase):
             updated_value = separator.join(parts) if separator else value
 
             # 如果修改后的值与原值不同，返回更新后的值
-            return updated_value if updated_value != value else None
+            if updated_value != value:
+                logger.debug(f"字段 {field} 应用分隔符 '{separator}': {value} -> {updated_value}")
+                return updated_value
 
         return None
 
@@ -517,7 +603,7 @@ class SmartIdentifier(_PluginBase):
             lines = template_group_str.split("\n")
 
             for line in lines:
-                if line.startswith("#"):
+                if line.startswith("#") or not line.strip():
                     continue
                 parts = line.split(":", 1)
                 if len(parts) == 2:
@@ -528,161 +614,32 @@ class SmartIdentifier(_PluginBase):
         except Exception as e:
             logger.error(f"Error parsing template groups: {e}")
             return {}
-
-
-class SmartIdentifier(_PluginBase):
-    # 插件名称
-    plugin_name = "智能识别器"
-    # 插件描述
-    plugin_desc = "智能识别媒体文件名称，提高识别准确率"
-    # 插件图标
-    plugin_icon = "MagicIcon"
-    # 插件版本
-    plugin_version = "1.0"
-    # 插件作者
-    plugin_author = "your_name"
-    # 作者主页
-    author_url = "https://github.com/your_name"
-    # 插件配置项ID前缀
-    plugin_config_prefix = "smartidentifier_"
-    # 加载顺序
-    plugin_order = 1
-    # 可使用的用户级别
-    auth_level = 1
-
-    # 私有属性
-    _enabled = False
-    _custom_patterns = ""
-
-    # 配置页面
-    _has_page = True
-    _page_path = "plugins/smartidentifier/page"
-    _page_title = "智能识别器"
-    _page_icon = "MagicIcon"
-    _page_type = "特殊识别"
-    _page_position = "系统管理"
-    _page_component = "SmartIdentifier"
-
-    def init_plugin(self, config: dict = None):
-        if config:
-            self._enabled = config.get("enabled", False)
-            self._custom_patterns = config.get("custom_patterns", "")
-        
-        # 注册事件
-        eventmanager.register_event(EventType.TransferRename, self.on_transfer_rename)
-        
-        # 注册前端页面
-        self.register_pages()
-        
-        # 注册API
-        self.register_api()
-
-    def get_state(self) -> bool:
-        return self._enabled
-
+            
     @staticmethod
-    def get_command() -> List[Dict[str, Any]]:
+    def __parse_field_separators(field_separators_str: Optional[str]) -> Dict[str, str]:
         """
-        定义命令
+        解析字段分隔符配置，将字符串格式的配置解析成字典
+        格式示例：字段名:分隔符\n字段名:分隔符
         """
-        return [{
-            "cmd": "/smartidentifier",
-            "title": "智能识别器",
-            "desc": "智能识别器设置",
-            "category": "设置",
-            "icon": "MagicIcon",
-            "action": "plugin_page",
-            "page": "SmartIdentifier"
-        }]
+        if not field_separators_str:
+            return {}
+            
+        try:
+            separators_dict = {}
+            lines = field_separators_str.split("\n")
+            
+            for line in lines:
+                if line.startswith("#") or not line.strip():
+                    continue
+                parts = line.split(":", 1)
+                if len(parts) == 2:
+                    field, separator = parts
+                    separators_dict[field.strip()] = separator.strip()
+            
+            return separators_dict
+        except Exception as e:
+            logger.error(f"Error parsing field separators: {e}")
+            return {}
 
-    def get_api(self) -> List[Dict[str, Any]]:
-        """
-        注册API
-        """
-        return [{
-            "path": "/smartidentifier/config",
-            "endpoint": self.get_config,
-            "methods": ["GET"],
-            "summary": "获取配置",
-            "description": "获取智能识别器配置"
-        }, {
-            "path": "/smartidentifier/config",
-            "endpoint": self.set_config,
-            "methods": ["POST"],
-            "summary": "保存配置",
-            "description": "保存智能识别器配置"
-        }]
 
-    def get_config(self) -> Tuple[bool, str, Any]:
-        """
-        获取配置
-        """
-        return True, "获取成功", {
-            "enabled": self._enabled,
-            "custom_patterns": self._custom_patterns
-        }
-
-    def set_config(self, data: dict) -> Tuple[bool, str, Any]:
-        """
-        保存配置
-        """
-        if data:
-            self._enabled = data.get("enabled", False)
-            self._custom_patterns = data.get("custom_patterns", "")
-            # 保存配置
-            self.update_config({
-                "enabled": self._enabled,
-                "custom_patterns": self._custom_patterns
-            })
-            return True, "保存成功", None
-        return False, "参数错误", None
-
-    def on_transfer_rename(self, event):
-        """
-        文件重命名事件处理
-        """
-        if not self._enabled:
-            return
-
-        # 在这里实现智能识别逻辑
-        # 示例：
-        # template_string = event.template_string
-        # rename_dict = event.rename_dict
-        # render_str = event.render_str
-        # path = event.path
-        
-        # 如果需要修改重命名结果，设置以下值：
-        # event.updated = True
-        # event.updated_str = "新的文件名"
-        # event.source = "SmartIdentifier"
-        
-        logger.info(f"智能识别器处理文件: {event.path}")
-        
-        return event
-
-    def register_pages(self):
-        """
-        注册前端页面
-        """
-        # 检查插件目录是否有dist目录，如果没有则不注册页面
-        plugin_path = os.path.dirname(os.path.abspath(__file__))
-        dist_path = os.path.join(plugin_path, "dist")
-        if not os.path.exists(dist_path):
-            logger.error(f"未找到前端页面文件，路径：{dist_path}")
-            return
-        
-        # 注册静态目录
-        self.register_static_path(
-            "/plugins/smartidentifier/static", 
-            dist_path
-        )
-        
-        # 注册页面
-        self.register_page(
-            "SmartIdentifier",
-            "智能识别器",
-            "MagicIcon",
-            "plugins/smartidentifier/static/js/app.js",
-            "特殊识别",
-            "系统管理"
-        )
+# 这里是文件结尾
