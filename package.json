@@ -12,6 +12,19 @@
       "v1.0.0": "从媒体整理记录提取识别词"
     }
   },
+  "PlexMediaCover": {
+    "name": "Plex媒体封面",
+    "description": "自动更新Plex媒体库的封面图片。",
+    "labels": "封面, 媒体库",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "支持Plex媒体的封面图片自动获取"
+    }
+  },
   "P1115StrmHelper": {
     "name": "115网盘助手",
     "description": "支持115网盘文件管理和流媒体服务器挂载。",
@@ -37,5 +50,21 @@
     "history": {
       "v1.0.0": "提供智能文件重命名功能"
     }
+  },
+  "AdaptiveIntroSkip": {
+    "name": "自适应IntroSkip",
+    "description": "通过用户的暂停与播放动作，批量标记片头片尾",
+    "version": "1.7.8",
+    "v2": true,
+    "history": {
+      "v1.7.8": "修复了一些已知问题",
+      "v1.7": "fix: 新入库剧集标记片头的一些错误，如遇到问题请重置插件。",
+      "v1.6": "(火柴总定制版)",
+      "v1.5": "时间支持 分:秒 格式",
+      "v1.4": "增加用户事件筛选"
+    },
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/chapter.png",
+    "author": "honue",
+    "level": 1
   }
 }
