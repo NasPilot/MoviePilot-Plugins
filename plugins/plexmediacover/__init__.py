@@ -35,16 +35,19 @@ from app.utils.url import UrlUtils
 
 # 导入样式模块
 try:
-    from app.plugins.plexmediacover.style_single_1 import generate_single_cover
+    from app.plugins.plexmediacover.style_single_1 import generate_single_cover as generate_single_cover_1
+    from app.plugins.plexmediacover.style_single_2 import generate_single_cover as generate_single_cover_2
     from app.plugins.plexmediacover.style_multi_1 import generate_multi_cover
 except ImportError:
     try:
         # 如果导入失败，使用本地导入
-        from .style_single_1 import generate_single_cover
+        from .style_single_1 import generate_single_cover as generate_single_cover_1
+        from .style_single_2 import generate_single_cover as generate_single_cover_2
         from .style_multi_1 import generate_multi_cover
     except ImportError:
-        logger.error("无法导入样式模块，请检查style_single_1.py和style_multi_1.py文件是否存在")
-        generate_single_cover = None
+        logger.error("无法导入样式模块，请检查样式文件是否存在")
+        generate_single_cover_1 = None
+        generate_single_cover_2 = None
         generate_multi_cover = None
 
 
@@ -354,13 +357,24 @@ class PlexMediaCover(_PluginBase):
         """从自定义图片路径生成封面"""
         try:
             if self._cover_style == 'single_1':
-                if generate_single_cover is None:
-                    logger.error("generate_single_cover函数未正确导入")
+                if generate_single_cover_1 is None:
+                    logger.error("generate_single_cover_1函数未正确导入")
                     return False
                 # 读取图片文件为字节数据
                 with open(image_path, 'rb') as f:
                     image_bytes = f.read()
-                result = generate_single_cover(
+                result = generate_single_cover_1(
+                    images=[image_bytes],
+                    title=title_config['zh']
+                )
+            elif self._cover_style == 'single_2':
+                if generate_single_cover_2 is None:
+                    logger.error("generate_single_cover_2函数未正确导入")
+                    return False
+                # 读取图片文件为字节数据
+                with open(image_path, 'rb') as f:
+                    image_bytes = f.read()
+                result = generate_single_cover_2(
                     images=[image_bytes],
                     title=title_config['zh']
                 )
@@ -432,14 +446,29 @@ class PlexMediaCover(_PluginBase):
                 
             # 生成封面
             if self._cover_style == 'single_1':
-                if generate_single_cover is None:
-                    logger.error("generate_single_cover函数未正确导入")
+                if generate_single_cover_1 is None:
+                    logger.error("generate_single_cover_1函数未正确导入")
                     return False
                 # 读取第一张图片为字节数据
                 if downloaded_images:
                     with open(downloaded_images[0], 'rb') as f:
                         image_bytes = f.read()
-                    result = generate_single_cover(
+                    result = generate_single_cover_1(
+                        images=[image_bytes],
+                        title=title_config['zh']
+                    )
+                else:
+                     logger.error("没有可用的图片生成封面")
+                     return False
+            elif self._cover_style == 'single_2':
+                if generate_single_cover_2 is None:
+                    logger.error("generate_single_cover_2函数未正确导入")
+                    return False
+                # 读取第一张图片为字节数据
+                if downloaded_images:
+                    with open(downloaded_images[0], 'rb') as f:
+                        image_bytes = f.read()
+                    result = generate_single_cover_2(
                         images=[image_bytes],
                         title=title_config['zh']
                     )
@@ -905,9 +934,10 @@ class PlexMediaCover(_PluginBase):
                                                             "model": "cover_style",
                                                             "label": "封面样式",
                                                             "items": [
-                                                                {"title": "单图样式1", "value": "single_1"},
-                                                                {"title": "多图样式1", "value": "multi_1"}
-                                                            ]
+                                                {"title": "单图样式1", "value": "single_1"},
+                                                {"title": "单图样式2", "value": "single_2"},
+                                                {"title": "多图样式1", "value": "multi_1"}
+                                            ]
                                                         }
                                                     }
                                                 ]
