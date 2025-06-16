@@ -58,11 +58,11 @@ class PlexMediaCover(_PluginBase):
     # 插件名称
     plugin_name = "Plex媒体库封面"
     # 插件描述
-    plugin_desc = "自动生成Plex媒体库封面，支持多种样式和自定义配置"
+    plugin_desc = "为Plex媒体服务器自动生成媒体库封面，支持多种样式和自定义配置"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png"
     # 插件版本
-    plugin_version = "2.0.0"
+    plugin_version = "0.1.0"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -134,6 +134,12 @@ class PlexMediaCover(_PluginBase):
         (data_path / 'covers').mkdir(parents=True, exist_ok=True)
         self._covers_path = data_path / 'covers'
         self._font_path = data_path / 'fonts'
+        
+        # 注册仪表板
+        if not hasattr(self, 'get_dashboard_meta'):
+            self.get_dashboard_meta = self.__get_dashboard_meta
+        if not hasattr(self, 'get_dashboard'):
+            self.get_dashboard = self.__get_dashboard
         
         if config:
             self._enabled = config.get("enabled")
@@ -727,6 +733,39 @@ class PlexMediaCover(_PluginBase):
                 self._event.clear()
         except Exception as e:
             logger.error(f"停止定时任务失败：{str(e)}")
+            
+    def __get_dashboard_meta(self) -> Optional[List[Dict[str, str]]]:
+        """
+        获取插件仪表盘元信息
+        """
+        return [{
+            "key": "plex_cover",
+            "name": "Plex媒体库封面"
+        }]
+        
+    def __get_dashboard(self, key: str, **kwargs) -> Optional[Tuple[Dict[str, Any], Dict[str, Any], List[dict]]]:
+        """
+        获取插件仪表盘
+        """
+        # 获取所有媒体库封面
+        covers = []
+        for cover_file in self._covers_path.glob('*.jpg'):
+            with open(cover_file, 'rb') as f:
+                cover_data = base64.b64encode(f.read()).decode('utf-8')
+                covers.append({
+                    "component": "VImg",
+                    "props": {
+                        "src": f"data:image/jpeg;base64,{cover_data}",
+                        "aspect-ratio": "1",
+                        "contain": True
+                    }
+                })
+                
+        return (
+            {"cols": 12, "md": 6},  # 布局配置
+            {"refresh": 60, "border": True, "title": "我的媒体库"},  # 全局配置
+            covers  # 封面元素列表
+        )
 
     def get_state(self) -> bool:
         """获取插件状态"""
