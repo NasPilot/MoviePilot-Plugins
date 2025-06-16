@@ -38,9 +38,14 @@ try:
     from app.plugins.plexmediacover.style_single_1 import generate_single_cover
     from app.plugins.plexmediacover.style_multi_1 import generate_multi_cover
 except ImportError:
-    # 如果导入失败，使用本地导入
-    from .style_single_1 import generate_single_cover
-    from .style_multi_1 import generate_multi_cover
+    try:
+        # 如果导入失败，使用本地导入
+        from .style_single_1 import generate_single_cover
+        from .style_multi_1 import generate_multi_cover
+    except ImportError:
+        logger.error("无法导入样式模块，请检查style_single_1.py和style_multi_1.py文件是否存在")
+        generate_single_cover = None
+        generate_multi_cover = None
 
 
 class PlexMediaCover(_PluginBase):
@@ -349,31 +354,26 @@ class PlexMediaCover(_PluginBase):
         """从自定义图片路径生成封面"""
         try:
             if self._cover_style == 'single_1':
+                if generate_single_cover is None:
+                    logger.error("generate_single_cover函数未正确导入")
+                    return False
+                # 读取图片文件为字节数据
+                with open(image_path, 'rb') as f:
+                    image_bytes = f.read()
                 result = generate_single_cover(
-                    image_path=image_path,
-                    zh_title=title_config['zh'],
-                    en_title=title_config['en'],
-                    zh_font_path=self._zh_font_path_local,
-                    en_font_path=self._en_font_path_local,
-                    zh_font_size=self._zh_font_size,
-                    en_font_size=self._en_font_size,
-                    blur_size=self._blur_size,
-                    color_ratio=self._color_ratio,
-                    use_primary=self._single_use_primary
+                    images=[image_bytes],
+                    title=title_config['zh']
                 )
             elif self._cover_style == 'multi_1':
+                if generate_multi_cover is None:
+                    logger.error("generate_multi_cover函数未正确导入")
+                    return False
+                # 读取图片文件为字节数据
+                with open(image_path, 'rb') as f:
+                    image_bytes = f.read()
                 result = generate_multi_cover(
-                    image_path=image_path,
-                    zh_title=title_config['zh'],
-                    en_title=title_config['en'],
-                    zh_font_path=self._zh_font_path_multi_1_local,
-                    en_font_path=self._en_font_path_multi_1_local,
-                    zh_font_size=self._zh_font_size_multi_1,
-                    en_font_size=self._en_font_size_multi_1,
-                    blur_size=self._blur_size_multi_1,
-                    color_ratio=self._color_ratio_multi_1,
-                    use_primary=self._multi_1_use_primary,
-                    use_blur=self._multi_1_blur
+                    images=[image_bytes],
+                    title=title_config['zh']
                 )
             else:
                 logger.error(f"不支持的封面样式：{self._cover_style}")
@@ -432,31 +432,32 @@ class PlexMediaCover(_PluginBase):
                 
             # 生成封面
             if self._cover_style == 'single_1':
-                result = generate_single_cover(
-                    image_path=str(temp_dir),
-                    zh_title=title_config['zh'],
-                    en_title=title_config['en'],
-                    zh_font_path=self._zh_font_path_local,
-                    en_font_path=self._en_font_path_local,
-                    zh_font_size=self._zh_font_size,
-                    en_font_size=self._en_font_size,
-                    blur_size=self._blur_size,
-                    color_ratio=self._color_ratio,
-                    use_primary=self._single_use_primary
-                )
+                if generate_single_cover is None:
+                    logger.error("generate_single_cover函数未正确导入")
+                    return False
+                # 读取第一张图片为字节数据
+                if downloaded_images:
+                    with open(downloaded_images[0], 'rb') as f:
+                        image_bytes = f.read()
+                    result = generate_single_cover(
+                        images=[image_bytes],
+                        title=title_config['zh']
+                    )
+                else:
+                     logger.error("没有可用的图片生成封面")
+                     return False
             elif self._cover_style == 'multi_1':
+                if generate_multi_cover is None:
+                    logger.error("generate_multi_cover函数未正确导入")
+                    return False
+                # 读取所有下载的图片为字节数据
+                image_bytes_list = []
+                for img_path in downloaded_images:
+                    with open(img_path, 'rb') as f:
+                        image_bytes_list.append(f.read())
                 result = generate_multi_cover(
-                    image_path=str(temp_dir),
-                    zh_title=title_config['zh'],
-                    en_title=title_config['en'],
-                    zh_font_path=self._zh_font_path_multi_1_local,
-                    en_font_path=self._en_font_path_multi_1_local,
-                    zh_font_size=self._zh_font_size_multi_1,
-                    en_font_size=self._en_font_size_multi_1,
-                    blur_size=self._blur_size_multi_1,
-                    color_ratio=self._color_ratio_multi_1,
-                    use_primary=self._multi_1_use_primary,
-                    use_blur=self._multi_1_blur
+                    images=image_bytes_list,
+                    title=title_config['zh']
                 )
             else:
                 logger.error(f"不支持的封面样式：{self._cover_style}")
