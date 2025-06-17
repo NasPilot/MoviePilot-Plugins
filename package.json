@@ -66,5 +66,18 @@
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/chapter.png",
     "author": "honue",
     "level": 1
+  },
+  "MerlinHosts": {
+    "name": "梅林路由Hosts",
+    "description": "定时将本地Hosts同步至华硕梅林路由Hosts。",
+    "labels": "Hosts, 路由, Merlin",
+    "version": "1.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0": "初始版本，支持同步Hosts到梅林路由并重启dnsmasq。"
+    }
   }
 }
