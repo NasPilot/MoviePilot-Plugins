@@ -3,7 +3,7 @@
   "id": "transword",
   "version": "0.2",
   "description": "根据手动整理时填写的电视剧参数生成自定义识别词，支持集数偏移、替换词等功能。",
-  "author": "jxxghp",
+  "author": "NasPilot",
   "author_url": "https://github.com/NasPilot",
   "icon": "words.png",
   "category": "工具",
