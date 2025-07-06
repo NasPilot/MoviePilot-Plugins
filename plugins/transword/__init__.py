@@ -3,7 +3,7 @@ from typing import Any, List, Dict, Tuple, Optional
 from pathlib import Path
 
 from app.core.config import settings
-from app.core.plugin import PluginBase, _PluginBase
+from app.plugins import _PluginBase
 from app.log import logger
 from app.schemas import NotificationType
 from app.schemas.types import EventType
@@ -17,7 +17,7 @@ class TransWordPlugin(_PluginBase):
     # 插件图标
     plugin_icon = "words.png"
     # 插件版本
-    plugin_version = "0.1"
+    plugin_version = "0.2"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
