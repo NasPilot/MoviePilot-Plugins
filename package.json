@@ -16,7 +16,7 @@
     "name": "Plex媒体封面",
     "description": "自动更新Plex媒体库的封面图片。",
     "labels": "封面, 媒体库",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png",
     "author": "NasPilot",
     "level": 1,
