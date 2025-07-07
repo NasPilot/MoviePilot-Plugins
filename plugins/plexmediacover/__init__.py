@@ -46,7 +46,7 @@ class PlexMediaCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png"
     # 插件版本
-    plugin_version = "0.2.0"
+    plugin_version = "0.3.0"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -2631,6 +2631,194 @@ class PlexMediaCover(_PluginBase):
         except Exception as e:
             logger.warning(f"验证字体文件时出错 {font_path}: {e}")
             return False
+
+    def get_dashboard(self, **kwargs) -> List[dict]:
+        """
+        获取插件仪表盘页面，显示媒体库封面
+        """
+        # 获取所有媒体服务器的媒体库信息
+        libraries_data = []
+        
+        if not self._enabled:
+            return [{
+                "component": "VCard",
+                "props": {
+                    "variant": "tonal",
+                    "class": "mb-3"
+                },
+                "content": [{
+                    "component": "VCardText",
+                    "text": "Plex媒体封面插件未启用"
+                }]
+            }]
+        
+        try:
+            # 获取媒体服务器配置
+            if self._servers:
+                for server_name, service in self._servers.items():
+                    if service.instance.is_inactive():
+                        continue
+                    
+                    # 获取媒体库列表
+                    libraries = self.mschain.librarys(server=server_name)
+                    if not libraries:
+                        continue
+                    
+                    for library in libraries:
+                        # 跳过被排除的媒体库
+                        if (self._exclude_libraries and 
+                            library.name in self._exclude_libraries):
+                            continue
+                        
+                        # 检查是否有自定义封面
+                        custom_cover_path = None
+                        if self._covers_output:
+                            cover_file = Path(self._covers_output) / f"{library.name}.jpg"
+                            if cover_file.exists():
+                                # 转换为base64用于显示
+                                try:
+                                    with open(cover_file, "rb") as f:
+                                        cover_data = base64.b64encode(f.read()).decode()
+                                        custom_cover_path = f"data:image/jpeg;base64,{cover_data}"
+                                except Exception as e:
+                                    logger.error(f"读取封面文件失败: {e}")
+                        
+                        # 使用自定义封面或默认封面
+                        cover_image = custom_cover_path or (library.image_list[0] if library.image_list else None)
+                        
+                        libraries_data.append({
+                            "server": server_name,
+                            "name": library.name,
+                            "type": library.type,
+                            "image": cover_image,
+                            "link": library.link,
+                            "has_custom_cover": custom_cover_path is not None
+                        })
+            
+            # 构建仪表盘组件
+            dashboard_elements = []
+            
+            # 添加标题
+            dashboard_elements.append({
+                "component": "VRow",
+                "content": [{
+                    "component": "VCol",
+                    "props": {"cols": 12},
+                    "content": [{
+                        "component": "div",
+                        "props": {"class": "text-h6 mb-2"},
+                        "text": "我的媒体库"
+                    }]
+                }]
+            })
+            
+            if not libraries_data:
+                dashboard_elements.append({
+                    "component": "VCard",
+                    "props": {
+                        "variant": "tonal",
+                        "class": "mb-3"
+                    },
+                    "content": [{
+                        "component": "VCardText",
+                        "text": "未找到可用的媒体库"
+                    }]
+                })
+            else:
+                # 按行显示媒体库，每行最多4个
+                rows = []
+                for i in range(0, len(libraries_data), 4):
+                    row_libraries = libraries_data[i:i+4]
+                    row_content = []
+                    
+                    for library in row_libraries:
+                        col_props = {"cols": 12, "sm": 6, "md": 3, "class": "pa-2"}
+                        
+                        card_content = []
+                        
+                        # 媒体库封面
+                        if library["image"]:
+                            card_content.append({
+                                "component": "VImg",
+                                "props": {
+                                    "src": library["image"],
+                                    "height": "200",
+                                    "cover": True,
+                                    "class": "rounded-t"
+                                }
+                            })
+                        
+                        # 媒体库信息
+                        card_text_content = [{
+                            "component": "div",
+                            "props": {"class": "text-subtitle-1 font-weight-bold"},
+                            "text": library["name"]
+                        }, {
+                            "component": "div",
+                            "props": {"class": "text-caption text-grey"},
+                            "text": f"{library['server']} • {library['type']}"
+                        }]
+                        
+                        # 如果有自定义封面，显示标识
+                        if library["has_custom_cover"]:
+                            card_text_content.append({
+                                "component": "VChip",
+                                "props": {
+                                    "size": "small",
+                                    "color": "success",
+                                    "class": "mt-1"
+                                },
+                                "text": "自定义封面"
+                            })
+                        
+                        card_content.append({
+                            "component": "VCardText",
+                            "content": card_text_content
+                        })
+                        
+                        # 如果有链接，添加点击事件
+                        card_props = {
+                            "class": "mb-3 cursor-pointer",
+                            "variant": "outlined",
+                            "hover": True
+                        }
+                        
+                        if library["link"]:
+                            card_props["@click"] = f"window.open('{library['link']}', '_blank')"
+                        
+                        row_content.append({
+                            "component": "VCol",
+                            "props": col_props,
+                            "content": [{
+                                "component": "VCard",
+                                "props": card_props,
+                                "content": card_content
+                            }]
+                        })
+                    
+                    rows.append({
+                        "component": "VRow",
+                        "content": row_content
+                    })
+                
+                dashboard_elements.extend(rows)
+            
+            return dashboard_elements
+            
+        except Exception as e:
+            logger.error(f"获取仪表盘数据失败: {e}")
+            return [{
+                "component": "VCard",
+                "props": {
+                    "variant": "tonal",
+                    "color": "error",
+                    "class": "mb-3"
+                },
+                "content": [{
+                    "component": "VCardText",
+                    "text": f"获取媒体库信息失败: {str(e)}"
+                }]
+            }]
 
     def stop_service(self):
         """

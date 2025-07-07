@@ -14,14 +14,15 @@
   },
   "PlexMediaCover": {
     "name": "Plex媒体封面",
-    "description": "自动更新Plex媒体库的封面图片。",
-    "labels": "封面, 媒体库",
-    "version": "0.2.0",
+    "description": "自动更新Plex媒体库的封面图片，支持仪表盘展示。",
+    "labels": "封面, 媒体库, 仪表盘",
+    "version": "0.3.0",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png",
     "author": "NasPilot",
     "level": 1,
     "v2": true,
     "history": {
+      "v0.3.0": "新增仪表盘功能，支持在仪表盘中展示媒体库封面",
       "v0.2.0": "支持Plex媒体的封面图片自动获取",
       "v0.1.0": "支持Plex媒体的封面图片自动获取"
     }
