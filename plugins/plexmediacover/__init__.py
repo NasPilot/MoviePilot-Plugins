@@ -30,12 +30,12 @@ from app.schemas.types import EventType
 from app.schemas import ServiceInfo
 from app.utils.http import RequestUtils
 from app.utils.url import UrlUtils
-from app.plugins.mediacovergenerator.style_single_1 import create_style_single_1
-from app.plugins.mediacovergenerator.style_single_2 import create_style_single_2
-from app.plugins.mediacovergenerator.style_multi_1  import create_style_multi_1
-from app.plugins.mediacovergenerator.static.single_1 import single_1
-from app.plugins.mediacovergenerator.static.single_2 import single_2
-from app.plugins.mediacovergenerator.static.multi_1  import multi_1
+from app.plugins.plexmediacover.style_single_1 import create_style_single_1
+from app.plugins.plexmediacover.style_single_2 import create_style_single_2
+from app.plugins.plexmediacover.style_multi_1  import create_style_multi_1
+from app.plugins.plexmediacover.static.single_1 import single_1
+from app.plugins.plexmediacover.static.single_2 import single_2
+from app.plugins.plexmediacover.static.multi_1  import multi_1
 
 
 class PlexMediaCover(_PluginBase):
@@ -262,8 +262,8 @@ class PlexMediaCover(_PluginBase):
         """
         if self._enabled and self._cron:
             return [{
-                "id": "MediaCoverGenerator",
-                "name": "媒体库封面更新服务",
+                "id": "PlexMediaCover",
+                "name": "Plex媒体库封面更新服务",
                 "trigger": CronTrigger.from_crontab(self._cron),
                 "func": self.__update_all_libraries,
                 "kwargs": {}
@@ -1034,7 +1034,7 @@ class PlexMediaCover(_PluginBase):
                                                             'label': '媒体服务器',
                                                             'items': [{"title": config.name, "value": config.name}
                                                                     for config in self.mediaserver_helper.get_configs().values()
-                                                                    if config.type in ("emby", "jellyfin")
+                                                                    if config.type in ("plex", "emby", "jellyfin")
                                                                     ]
                                                         }
                                                     }
@@ -1340,6 +1340,8 @@ class PlexMediaCover(_PluginBase):
             return
         if service.type == 'emby':
             library_id = library.get("Id")
+        elif service.type == 'plex':
+            library_id = library.get("key")
         else:
             library_id = library.get("ItemId")
         if f"{existsinfo.server}-{library_id}" in self._exclude_libraries:
@@ -1402,6 +1404,8 @@ class PlexMediaCover(_PluginBase):
                     return
                 if service.type == 'emby':
                     library_id = library.get("Id")
+                elif service.type == 'plex':
+                    library_id = library.get("key")
                 else:
                     library_id = library.get("ItemId")
                 if f"{server}-{library_id}" in self._exclude_libraries:
@@ -1501,6 +1505,8 @@ class PlexMediaCover(_PluginBase):
         library_type = library.get('CollectionType')
         if service.type == 'emby':
             library_id = library.get("Id")
+        elif service.type == 'plex':
+            library_id = library.get("key")
         else:
             library_id = library.get("ItemId")
         parent_id = library_id
@@ -1655,15 +1661,24 @@ class PlexMediaCover(_PluginBase):
                 if not include_types:
                     include_types = 'Movie,Series'
 
-                url = f'[HOST]emby/Items/?api_key=[APIKEY]' \
-                      f'&ParentId={parent_id}&SortBy={sort_by}&Limit={limit}' \
-                      f'&StartIndex={offset}&IncludeItemTypes={include_types}' \
-                      f'&Recursive=True&SortOrder=Descending'
-
-                res = service.instance.get_data(url=url)
-                if res:
-                    data = res.json()
-                    return data.get("Items", [])
+                if service.type == 'plex':
+                    # Plex API 获取媒体项
+                    url = f'[HOST]library/sections/{parent_id}/all?X-Plex-Token=[APIKEY]' \
+                          f'&sort={sort_by.lower()}&limit={limit}&offset={offset}'
+                    res = service.instance.get_data(url=url)
+                    if res:
+                        data = res.json()
+                        return data.get("MediaContainer", {}).get("Metadata", [])
+                else:
+                    # Emby/Jellyfin API
+                    url = f'[HOST]emby/Items/?api_key=[APIKEY]' \
+                          f'&ParentId={parent_id}&SortBy={sort_by}&Limit={limit}' \
+                          f'&StartIndex={offset}&IncludeItemTypes={include_types}' \
+                          f'&Recursive=True&SortOrder=Descending'
+                    res = service.instance.get_data(url=url)
+                    if res:
+                        data = res.json()
+                        return data.get("Items", [])
             except Exception as err:
                 logger.error(f"获取媒体项失败：{str(err)}")
             return []
@@ -1680,34 +1695,46 @@ class PlexMediaCover(_PluginBase):
         for item in items:
             tags = []
 
-            # 统一收集所有可能的图片 tag 字符串作为唯一标识
-            if item.get("PrimaryImageTag"):
-                tags.append(f"Primary:{item['PrimaryImageTag']}")
-            if item.get("AlbumPrimaryImageTag"):
-                tags.append(f"AlbumPrimary:{item['AlbumPrimaryImageTag']}")
-            if item.get("BackdropImageTags"):
-                tags.extend([f"Backdrop:{t}" for t in item["BackdropImageTags"]])
-            if item.get("ParentBackdropImageTags"):
-                tags.extend([f"ParentBackdrop:{t}" for t in item["ParentBackdropImageTags"]])
-            if item.get("ImageTags") and item["ImageTags"].get("Primary"):
-                tags.append(f"ImagePrimary:{item['ImageTags']['Primary']}")
+            # Plex媒体项的标签处理
+            if item.get('ratingKey'):
+                # Plex使用ratingKey作为唯一标识
+                if item.get('thumb'):
+                    tags.append(f"Plex_thumb:{item['thumb']}")
+                if item.get('art'):
+                    tags.append(f"Plex_art:{item['art']}")
+            else:
+                # Emby/Jellyfin的标签处理
+                if item.get("PrimaryImageTag"):
+                    tags.append(f"Primary:{item['PrimaryImageTag']}")
+                if item.get("AlbumPrimaryImageTag"):
+                    tags.append(f"AlbumPrimary:{item['AlbumPrimaryImageTag']}")
+                if item.get("BackdropImageTags"):
+                    tags.extend([f"Backdrop:{t}" for t in item["BackdropImageTags"]])
+                if item.get("ParentBackdropImageTags"):
+                    tags.extend([f"ParentBackdrop:{t}" for t in item["ParentBackdropImageTags"]])
+                if item.get("ImageTags") and item["ImageTags"].get("Primary"):
+                    tags.append(f"ImagePrimary:{item['ImageTags']['Primary']}")
 
             # 判断是否重复（所有 tag 都未见过才添加）
             if any(tag in seen_tags for tag in tags):
                 continue  # 跳过已有标签的 item
 
             # 决定是否为有效项目
-            if item['Type'] in 'MusicAlbum,Audio':
+            if item.get('ratingKey'):  # Plex媒体项
+                if item.get('thumb') or item.get('art'):
+                    valid_items.append(item)
+                    seen_tags.update(tags)
+            elif item.get('Type') and item['Type'] in 'MusicAlbum,Audio':  # Emby/Jellyfin音频
                 if item.get("ParentBackdropImageTags") or item.get("AlbumPrimaryImageTag") or item.get("PrimaryImageTag"):
                     valid_items.append(item)
                     seen_tags.update(tags)
-            elif self._cover_style.startswith('multi'):
+            elif self._cover_style.startswith('multi'):  # Emby/Jellyfin多图
                 if (item.get("ImageTags") and item["ImageTags"].get("Primary")) \
                     or item.get("BackdropImageTags") \
                     or item.get("ParentBackdropImageTags"):
                     valid_items.append(item)
                     seen_tags.update(tags)
-            elif self._cover_style.startswith('single'):
+            elif self._cover_style.startswith('single'):  # Emby/Jellyfin单图
                 if item.get("BackdropImageTags") \
                     or item.get("ParentBackdropImageTags") \
                     or (item.get("ImageTags") and item["ImageTags"].get("Primary")):
@@ -1719,22 +1746,25 @@ class PlexMediaCover(_PluginBase):
     
     def __update_single_image(self, service, library, title, item):
         """更新单图封面"""
-        logger.info(f"媒体库 {service.name}：{library['Name']} 从媒体项获取图片")
+        library_name = library.get('title') if service.type == 'plex' else library.get('Name')
+        logger.info(f"媒体库 {service.name}：{library_name} 从媒体项获取图片")
         updated_item_id = ''
         image_url = self.__get_image_url(item)
         if not image_url:
             return False
             
-        image_path = self.__download_image(service, image_url, library['Name'], count=1)
+        image_path = self.__download_image(service, image_url, library_name, count=1)
         if not image_path:
             return False
         updated_item_id = self.__get_item_id(item)
-        image_data = self.__generate_image_from_path(service.name, library['Name'], title, image_path)
+        image_data = self.__generate_image_from_path(service.name, library_name, title, image_path)
             
         if not image_data:
             return False
         if service.type == 'emby':
             library_id = library.get("Id")
+        elif service.type == 'plex':
+            library_id = library.get("key")
         else:
             library_id = library.get("ItemId")
         # 更新id
@@ -1748,7 +1778,8 @@ class PlexMediaCover(_PluginBase):
     
     def __update_grid_image(self, service, library, title, items):
         """更新九宫格封面"""
-        logger.info(f"媒体库 {service.name}：{library['Name']} 从媒体项获取图片")
+        library_name = library.get('title') if service.type == 'plex' else library.get('Name')
+        logger.info(f"媒体库 {service.name}：{library_name} 从媒体项获取图片")
 
         image_paths = []
         
@@ -1756,7 +1787,7 @@ class PlexMediaCover(_PluginBase):
         for i, item in enumerate(items[:9]):
             image_url = self.__get_image_url(item)
             if image_url:
-                image_path = self.__download_image(service, image_url, library['Name'], count=i+1)
+                image_path = self.__download_image(service, image_url, library_name, count=i+1)
                 if image_path:
                     image_paths.append(image_path)
                     updated_item_ids.append(self.__get_item_id(item))
@@ -1765,11 +1796,13 @@ class PlexMediaCover(_PluginBase):
             return False
             
         # 生成九宫格图片
-        image_data = self.__generate_image_from_path(service.name, library['Name'], title)
+        image_data = self.__generate_image_from_path(service.name, library_name, title)
         if not image_data:
             return False
         if service.type == 'emby':
             library_id = library.get("Id")
+        elif service.type == 'plex':
+            library_id = library.get("key")
         else:
             library_id = library.get("ItemId")
         # 更新ids
@@ -1835,6 +1868,8 @@ class PlexMediaCover(_PluginBase):
             try:
                 if service.type == 'emby':
                     url = f'[HOST]emby/Library/VirtualFolders/Query?api_key=[APIKEY]'
+                elif service.type == 'plex':
+                    url = f'[HOST]library/sections?X-Plex-Token=[APIKEY]'
                 else:
                     url = f'[HOST]emby/Library/VirtualFolders/?api_key=[APIKEY]'
                 res = service.instance.get_data(url=url)
@@ -1842,6 +1877,8 @@ class PlexMediaCover(_PluginBase):
                     data = res.json()
                     if service.type == 'emby':
                         return data.get("Items", [])
+                    elif service.type == 'plex':
+                        return data.get("MediaContainer", {}).get("Directory", [])
                     else:
                         return data
             except Exception as err:
@@ -1858,11 +1895,14 @@ class PlexMediaCover(_PluginBase):
             for library in libraries:
                 if service.type == 'emby':
                     library_id = library.get("Id")
+                elif service.type == 'plex':
+                    library_id = library.get("key")
                 else:
                     library_id = library.get("ItemId")
-                if library['Name'] and library_id:
+                library_name = library.get('title') if service.type == 'plex' else library.get('Name')
+                if library_name and library_id:
                     lib_item = {
-                        "name": f"{server}: {library['Name']}",
+                        "name": f"{server}: {library_name}",
                         "value": f"{server}-{library_id}"
                     }
                     lib_items.append(lib_item)
@@ -1871,10 +1911,14 @@ class PlexMediaCover(_PluginBase):
             logger.error(f"获取所有媒体库失败：{str(err)}")
             return []
         
-    def __get_image_url(self, item):
+    def __get_image_url(self, item, service=None):
         """
         从媒体项信息中获取图片URL
         """
+        # Plex
+        if service and service.type == 'plex':
+            return self.__get_plex_image_url(item)
+        
         # Emby/Jellyfin
         if item['Type'] in 'MusicAlbum,Audio':
             if item.get("ParentBackdropImageTags") and len(item["ParentBackdropImageTags"]) > 0:
@@ -1950,8 +1994,12 @@ class PlexMediaCover(_PluginBase):
         """
         从媒体项信息中获取项目ID
         """
+        # Plex - 使用ratingKey作为唯一标识
+        if item.get('ratingKey'):
+            return item.get('ratingKey')
+        
         # Emby/Jellyfin
-        if item['Type'] in 'MusicAlbum,Audio':
+        if item.get('Type') and item['Type'] in 'MusicAlbum,Audio':
             if item.get("ParentBackdropImageTags") and len(item["ParentBackdropImageTags"]) > 0:
                 item_id = item.get("ParentBackdropItemId")
             elif item.get("PrimaryImageTag"):
@@ -1988,6 +2036,43 @@ class PlexMediaCover(_PluginBase):
                     item_id = item.get("Id")
 
         return item_id
+
+    def __get_plex_image_url(self, item):
+        """
+        获取Plex媒体项的图片URL
+        """
+        try:
+            # Plex的图片路径通常在thumb或art字段中
+            if self._cover_style.startswith('single'):
+                if self._single_use_primary:
+                    # 优先使用poster/thumb
+                    if item.get('thumb'):
+                        return f'[HOST]{item["thumb"]}?X-Plex-Token=[APIKEY]'
+                    elif item.get('art'):
+                        return f'[HOST]{item["art"]}?X-Plex-Token=[APIKEY]'
+                else:
+                    # 优先使用背景图/art
+                    if item.get('art'):
+                        return f'[HOST]{item["art"]}?X-Plex-Token=[APIKEY]'
+                    elif item.get('thumb'):
+                        return f'[HOST]{item["thumb"]}?X-Plex-Token=[APIKEY]'
+            elif self._cover_style.startswith('multi'):
+                if self._multi_1_use_primary:
+                    # 优先使用poster/thumb
+                    if item.get('thumb'):
+                        return f'[HOST]{item["thumb"]}?X-Plex-Token=[APIKEY]'
+                    elif item.get('art'):
+                        return f'[HOST]{item["art"]}?X-Plex-Token=[APIKEY]'
+                else:
+                    # 优先使用背景图/art
+                    if item.get('art'):
+                        return f'[HOST]{item["art"]}?X-Plex-Token=[APIKEY]'
+                    elif item.get('thumb'):
+                        return f'[HOST]{item["thumb"]}?X-Plex-Token=[APIKEY]'
+            return None
+        except Exception as e:
+            logger.error(f"获取Plex图片URL失败: {str(e)}")
+            return None
 
     def __download_image(self, service, imageurl, library_name, count=None, retries=3, delay=1):
         """
@@ -2071,19 +2156,24 @@ class PlexMediaCover(_PluginBase):
         设置媒体库封面
         """
 
-        """设置Emby媒体库封面"""
+        """设置媒体库封面"""
         try:
             if service.type == 'emby':
                 library_id = library.get("Id")
+                url = f'[HOST]emby/Items/{library_id}/Images/Primary?api_key=[APIKEY]'
+            elif service.type == 'plex':
+                library_id = library.get("key")
+                url = f'[HOST]library/sections/{library_id}/poster?X-Plex-Token=[APIKEY]'
             else:
                 library_id = library.get("ItemId")
-            url = f'[HOST]emby/Items/{library_id}/Images/Primary?api_key=[APIKEY]'
+                url = f'[HOST]emby/Items/{library_id}/Images/Primary?api_key=[APIKEY]'
             
             # 在发送前保存一份图片到本地
             if self._covers_output:
                 try:
                     image_bytes = base64.b64decode(image_base64)
-                    self.__save_image_to_local(image_bytes, f"{library['Name']}.jpg")
+                    library_name = library.get('title') if service.type == 'plex' else library.get('Name')
+                    self.__save_image_to_local(image_bytes, f"{library_name}.jpg")
                 except Exception as save_err:
                     logger.error(f"保存发送前图片失败: {str(save_err)}")
             
@@ -2098,10 +2188,12 @@ class PlexMediaCover(_PluginBase):
             if res and res.status_code in [200, 204]:
                 return True
             else:
-                logger.error(f"设置「{library['Name']}」封面失败，错误码：{res.status_code if res else 'No response'}")
+                library_name = library.get('title') if service.type == 'plex' else library.get('Name')
+                logger.error(f"设置「{library_name}」封面失败，错误码：{res.status_code if res else 'No response'}")
                 return False
         except Exception as err:
-            logger.error(f"设置「{library['Name']}」封面失败：{str(err)}")
+            library_name = library.get('title') if service.type == 'plex' else library.get('Name')
+            logger.error(f"设置「{library_name}」封面失败：{str(err)}")
         return False
 
     def clean_cover_history(self, save=True):
