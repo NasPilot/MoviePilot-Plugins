@@ -46,7 +46,7 @@ class PlexMediaCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png"
     # 插件版本
-    plugin_version = "0.3.0"
+    plugin_version = "0.3.1"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -2177,13 +2177,34 @@ class PlexMediaCover(_PluginBase):
                 except Exception as save_err:
                     logger.error(f"保存发送前图片失败: {str(save_err)}")
             
-            res = service.instance.post_data(
-                url=url,
-                data=image_base64,
-                headers={
-                    "Content-Type": "image/png"
+            # 修复Plex API调用：使用正确的端点格式和数据格式
+            if service.type == 'plex':
+                # Plex API需要使用POST方法上传封面到/library/sections/{library_id}/poster端点
+                # 参考: https://github.com/pkkid/python-plexapi/issues/179
+                # Plex API期望接收二进制数据，而不是base64编码的字符串
+                endpoint = f"library/sections/{library_id}/poster"
+                image_binary = base64.b64decode(image_base64)
+                # 获取Plex实例的token以确保认证正确
+                plex_token = getattr(service.instance, '_token', None)
+                headers = {
+                    "Content-Type": "application/octet-stream"
                 }
-            )
+                if plex_token:
+                    headers["X-Plex-Token"] = plex_token
+                res = service.instance.post_data(
+                    endpoint=endpoint,
+                    data=image_binary,
+                    headers=headers
+                )
+            else:
+                # 对于Emby/Jellyfin，保持原有的调用方式
+                res = service.instance.post_data(
+                    url=url,
+                    data=image_base64,
+                    headers={
+                        "Content-Type": "image/png"
+                    }
+                )
             
             if res and res.status_code in [200, 204]:
                 return True
