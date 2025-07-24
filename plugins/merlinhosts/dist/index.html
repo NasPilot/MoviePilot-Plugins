@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merlin Hosts 插件配置</title>
+    <link rel="stylesheet" href="./assets/merlin-style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--merlin-bg-primary) 0%, var(--merlin-bg-secondary) 100%);
+            color: var(--merlin-primary);
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .loading::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--merlin-bg-light);
+            border-top: 3px solid var(--merlin-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">正在加载 Merlin Hosts 配置...</div>
+    </div>
+    <script src="./assets/index.js"></script>
+</body>
+</html>

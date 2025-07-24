@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import re
 import threading
@@ -12,7 +13,11 @@ from app.core.config import settings
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import NotificationType
+from app.utils.common import retry
 from app.utils.system import SystemUtils
+
+# 依赖检查
+import paramiko
 
 lock = threading.Lock()
 
@@ -21,7 +26,7 @@ class MerlinHosts(_PluginBase):
     # 插件名称
     plugin_name = "梅林路由Hosts"
     # 插件描述
-    plugin_desc = "定时将本地Hosts同步至华硕梅林路由Hosts。"
+    plugin_desc = "通过SSH连接定时将本地Hosts同步至华硕梅林路由器，支持密码和密钥认证。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png"
     # 插件版本
@@ -47,6 +52,16 @@ class MerlinHosts(_PluginBase):
     _cron = None
     # 发送通知
     _notify = False
+    # 路由器IP地址
+    _router_ip = None
+    # SSH端口
+    _ssh_port = 22
+    # 用户名
+    _username = None
+    # 密码
+    _password = None
+    # 私钥文件路径
+    _private_key_path = None
     # 忽略的IP或域名
     _ignore = None
     # 定时器
@@ -64,6 +79,11 @@ class MerlinHosts(_PluginBase):
         self._onlyonce = config.get("onlyonce")
         self._cron = config.get("cron")
         self._notify = config.get("notify")
+        self._router_ip = config.get("router_ip")
+        self._ssh_port = config.get("ssh_port", 22)
+        self._username = config.get("username")
+        self._password = config.get("password")
+        self._private_key_path = config.get("private_key_path")
         self._ignore = config.get("ignore")
 
         # 停止现有任务
@@ -130,144 +150,25 @@ class MerlinHosts(_PluginBase):
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """
-        拼装插件配置页面
+        拼装插件配置页面 - Vue模式下返回空配置
         """
-        return [
-            {
-                'component': 'VForm',
-                'content': [
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'enabled',
-                                            'label': '启用插件',
-                                            'hint': '开启后插件将处于激活状态',
-                                            'persistent-hint': True
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'notify',
-                                            'label': '发送通知',
-                                            'hint': '是否在特定事件发生时发送通知',
-                                            'persistent-hint': True
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'onlyonce',
-                                            'label': '立即运行一次',
-                                            'hint': '插件将立即运行一次',
-                                            'persistent-hint': True
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'cron',
-                                            'label': '执行周期',
-                                            'placeholder': '5位cron表达式',
-                                            'hint': '使用cron表达式指定执行周期，如 0 8 * * *',
-                                            'persistent-hint': True
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'ignore',
-                                            'label': '忽略的IP或域名',
-                                            'hint': '如：10.10.10.1|wiki.movie-pilot.org',
-                                            'persistent-hint': True
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '注意：插件会将本地hosts同步到梅林路由器的/jffs/configs/hosts.add文件，并重启dnsmasq服务'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            }
-        ], {
+        return [], {
             "enabled": False,
             "notify": True,
-            "cron": "0 6 * * *"
+            "cron": "0 6 * * *",
+            "router_ip": "192.168.1.1",
+            "ssh_port": 22,
+            "username": "admin",
+            "password": "",
+            "private_key_path": "",
+            "ignore": ""
         }
+
+    def get_render_mode(self) -> Tuple[str, str]:
+        """
+        获取渲染模式
+        """
+        return "vue", "dist/assets"
 
     def get_page(self) -> List[dict]:
         pass
@@ -276,6 +177,12 @@ class MerlinHosts(_PluginBase):
         """
         同步本地hosts到梅林路由器
         """
+        # 检查必要的配置
+        if not self._router_ip or not self._username:
+            self.__send_message(title="【梅林路由Hosts更新】", text="路由器IP地址或用户名未配置，请检查配置")
+            return
+
+        # 获取本地hosts文件内容
         local_hosts = self.__get_local_hosts()
         if not local_hosts:
             self.__send_message(title="【梅林路由Hosts更新】", text="获取本地hosts失败，更新失败，请检查日志")
@@ -285,12 +192,11 @@ class MerlinHosts(_PluginBase):
         formatted_hosts = self.__format_hosts(local_hosts)
         if not formatted_hosts:
             logger.info("没有有效的hosts条目需要同步")
+            self.__send_message(title="【梅林路由Hosts更新】", text="没有有效的hosts条目需要同步")
             return
 
-        # 写入梅林路由器的hosts.add文件
-        if self.__write_to_merlin_hosts(formatted_hosts):
-            # 重启dnsmasq服务
-            self.__restart_dnsmasq()
+        # 通过SSH连接到梅林路由器并同步hosts
+        if self.__sync_hosts_via_ssh(formatted_hosts):
             self.__send_message(title="【梅林路由Hosts更新】", text="同步hosts到梅林路由器成功")
         else:
             self.__send_message(title="【梅林路由Hosts更新】", text="同步hosts到梅林路由器失败，请检查日志")
@@ -321,32 +227,92 @@ class MerlinHosts(_PluginBase):
             logger.error(f"格式化hosts失败: {e}")
             return []
 
-    def __write_to_merlin_hosts(self, hosts: list) -> bool:
+    @retry(Exception, logger=logger)
+    def __sync_hosts_via_ssh(self, hosts: list) -> bool:
         """
-        将hosts写入梅林路由器的hosts.add文件
+        通过SSH连接到梅林路由器并同步hosts
         """
+        ssh_client = None
         try:
-            merlin_hosts_path = "/jffs/configs/hosts.add"
-            hosts_content = "\n".join(hosts)
+            # 创建SSH客户端
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
-            # 模拟写入文件操作
-            logger.info(f"将以下内容写入梅林路由器hosts.add文件:\n{hosts_content}")
+            # 连接到路由器
+            logger.info(f"正在连接到梅林路由器 {self._router_ip}:{self._ssh_port}")
+            
+            # 准备认证参数
+            connect_kwargs = {
+                'hostname': self._router_ip,
+                'port': self._ssh_port,
+                'username': self._username,
+                'timeout': 30
+            }
+            
+            # 选择认证方式
+            if self._private_key_path and self._private_key_path.strip():
+                # 使用私钥认证
+                try:
+                    private_key = paramiko.RSAKey.from_private_key_file(self._private_key_path)
+                    connect_kwargs['pkey'] = private_key
+                    logger.info("使用私钥认证")
+                except Exception as e:
+                    logger.error(f"加载私钥失败: {e}")
+                    if self._password:
+                        connect_kwargs['password'] = self._password
+                        logger.info("私钥认证失败，回退到密码认证")
+                    else:
+                        return False
+            elif self._password:
+                # 使用密码认证
+                connect_kwargs['password'] = self._password
+                logger.info("使用密码认证")
+            else:
+                logger.error("未提供有效的认证方式（密码或私钥）")
+                return False
+            
+            # 建立SSH连接
+            ssh_client.connect(**connect_kwargs)
+            logger.info("SSH连接建立成功")
+            
+            # 准备hosts内容
+            hosts_content = "\n".join(hosts) + "\n"
+            logger.info(f"准备写入的hosts内容:\n{hosts_content}")
+            
+            # 创建配置目录（如果不存在）
+            stdin, stdout, stderr = ssh_client.exec_command("mkdir -p /jffs/configs")
+            stdout.read()
+            
+            # 备份现有的hosts.add文件
+            stdin, stdout, stderr = ssh_client.exec_command("cp /jffs/configs/hosts.add /jffs/configs/hosts.add.bak 2>/dev/null || true")
+            stdout.read()
+            
+            # 写入新的hosts.add文件
+            sftp = ssh_client.open_sftp()
+            with sftp.open('/jffs/configs/hosts.add', 'w') as remote_file:
+                remote_file.write(hosts_content)
+            sftp.close()
+            logger.info("hosts.add文件写入成功")
+            
+            # 重启dnsmasq服务
+            logger.info("正在重启dnsmasq服务")
+            stdin, stdout, stderr = ssh_client.exec_command("service restart_dnsmasq")
+            result = stdout.read().decode('utf-8')
+            error = stderr.read().decode('utf-8')
+            
+            if error:
+                logger.warning(f"重启dnsmasq服务时有警告: {error}")
+            
+            logger.info(f"dnsmasq服务重启完成: {result}")
             return True
+            
         except Exception as e:
-            logger.error(f"写入梅林路由器hosts.add文件失败: {e}")
+            logger.error(f"SSH连接或操作失败: {e}")
             return False
-
-    def __restart_dnsmasq(self) -> bool:
-        """
-        重启dnsmasq服务
-        """
-        try:
-            # 模拟重启dnsmasq服务
-            logger.info("正在重启梅林路由器的dnsmasq服务")
-            return True
-        except Exception as e:
-            logger.error(f"重启dnsmasq服务失败: {e}")
-            return False
+        finally:
+            if ssh_client:
+                ssh_client.close()
+                logger.info("SSH连接已关闭")
 
     @staticmethod
     def __get_local_hosts() -> list:
@@ -374,7 +340,6 @@ class MerlinHosts(_PluginBase):
         检查是否应该忽略给定的IP地址
         """
         try:
-            import ipaddress
             ip_obj = ipaddress.ip_address(ip)
             # 忽略本地回环地址 (127.0.0.0/8) 和所有IPv6地址
             if ip_obj.is_loopback or ip_obj.version == 6:

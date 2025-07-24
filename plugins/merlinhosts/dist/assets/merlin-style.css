@@ -1,0 +1,982 @@
+/* Merlin路由器风格的CSS样式 */
+
+:root {
+  /* Merlin 主题色 - 基于真实固件颜色 */
+  --merlin-primary: #fc0;
+  --merlin-primary-dark: #e6b800;
+  --merlin-secondary: #596d74;
+  --merlin-accent: #ffcc00;
+  
+  /* 背景色 - 基于Merlin固件 */
+  --merlin-bg-main: #2e3a3e;
+  --merlin-bg-panel: #475a5f;
+  --merlin-bg-input: #596d74;
+  --merlin-bg-dark: #21333e;
+  --merlin-bg-form: #4d595d;
+  
+  /* 文字色 */
+  --merlin-text-primary: #ffffff;
+  --merlin-text-secondary: #e0e0e0;
+  --merlin-text-muted: #cccccc;
+  --merlin-text-accent: #ffcc00;
+  
+  /* 边框色 */
+  --merlin-border: #929ea1;
+  --merlin-border-dark: #222728;
+  --merlin-border-light: #576d73;
+  
+  /* 状态色 */
+  --merlin-success: #00ff7f;
+  --merlin-warning: #ffd166;
+  --merlin-error: #ff4d4d;
+  --merlin-info: #4cc2ff;
+  
+  /* 滚动条 */
+  --merlin-scrollbar-thumb: #ffffff;
+  --merlin-scrollbar-track: #576d73;
+  
+  /* 兼容性变量 */
+  --merlin-bg-primary: #1e3c72;
+  --merlin-bg-secondary: #2a5298;
+  --merlin-bg-light: rgba(255, 255, 255, 0.1);
+  --merlin-input-bg: rgba(89, 109, 116, 0.8);
+  --merlin-input-border: #929ea1;
+  --merlin-shadow: rgba(0, 0, 0, 0.3);
+}
+
+.merlin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px;
+  background: var(--merlin-bg-form);
+  border-radius: 4px;
+  border: 1px solid var(--merlin-border-dark);
+  color: var(--merlin-text-primary);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.merlin-header {
+  background: var(--merlin-bg-dark);
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-left: 2px solid var(--merlin-primary);
+  backdrop-filter: blur(5px);
+  position: relative;
+}
+
+.merlin-title {
+  color: var(--merlin-primary);
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0 0 5px 0;
+  text-shadow: 2px 2px 25px var(--merlin-primary);
+}
+
+.merlin-subtitle {
+  color: var(--merlin-text-primary);
+  font-size: 14px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.form-table {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1px solid var(--merlin-border);
+  backdrop-filter: blur(5px);
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--merlin-bg-light);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.form-row:hover {
+  background: rgba(255, 204, 0, 0.1);
+  border-left: 4px solid var(--merlin-primary);
+  transform: translateX(2px);
+}
+
+.form-row:last-child {
+  border-bottom: none;
+}
+
+.form-label {
+  color: var(--merlin-text-primary);
+  font-weight: bold;
+  min-width: 150px;
+  margin-right: 20px;
+  font-size: 14px;
+  text-shadow: 1px 1px 2px var(--merlin-shadow);
+}
+
+.form-control {
+  flex: 1;
+}
+
+/* 输入框样式 - Merlin风格 */
+.merlin-input {
+  width: 100%;
+  padding: 3px;
+  background: var(--merlin-bg-input);
+  border: 1px solid var(--merlin-border);
+  border-radius: 0;
+  color: var(--merlin-text-primary);
+  font-size: 13px;
+  font-family: Courier New, Courier, monospace;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.merlin-input:focus {
+  outline: none;
+  border-color: var(--merlin-primary);
+  background: var(--merlin-bg-input);
+}
+
+.merlin-input::placeholder {
+  color: var(--merlin-primary);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* 自定义开关样式 */
+.merlin-switch {
+  position: relative;
+  display: inline-block;
+  width: 54px;
+  height: 28px;
+}
+
+.merlin-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #596d74 0%, #4a5a61 100%);
+  transition: 0.4s;
+  border-radius: 28px;
+  border: 2px solid var(--merlin-input-border);
+  box-shadow: inset 0 2px 4px var(--merlin-shadow);
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+  transition: 0.4s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px var(--merlin-shadow);
+}
+
+input:checked + .switch-slider {
+  background: linear-gradient(135deg, var(--merlin-primary) 0%, #e6b800 100%);
+  border-color: var(--merlin-primary);
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
+}
+
+input:checked + .switch-slider:before {
+  transform: translateX(26px);
+}
+
+/* 按钮样式 - 完全匹配Merlin固件button_gen样式 */
+.merlin-button {
+  min-width: auto;
+  border-radius: 4px;
+  padding: 3px 5px 5px 5px;
+  margin: 2px;
+  font-weight: normal;
+  height: 20px;
+  font-size: 11px;
+  color: white !important;
+  text-decoration: none !important;
+  cursor: pointer;
+  display: inline-block;
+  border: 1px solid #929ea1;
+  background: #596d74;
+  font-family: Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.merlin-button:hover {
+  height: 20px !important;
+  width: auto !important;
+  min-width: auto !important;
+  border-radius: 4px !important;
+  padding: 3px 5px 5px 5px !important;
+  margin: 2px !important;
+  font-weight: normal !important;
+  font-size: 12px !important;
+  background: #6a7a81;
+  border-color: #a3afb2;
+}
+
+.merlin-button:active {
+  background: #4a5a61;
+  border-color: #7a8a91;
+}
+
+.merlin-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #4a5a61;
+  border-color: #7a8a91;
+}
+
+/* 应用按钮容器样式 - 匹配Merlin固件apply_gen */
+.apply_gen {
+  margin-bottom: 10px;
+}
+
+/* button_gen_small类样式 - 完全匹配梅林固件 */
+.button_gen_small {
+  min-width: auto;
+  border-radius: 4px;
+  padding: 3px 5px 5px 5px;
+  margin: 2px;
+  font-weight: normal;
+  height: 20px;
+  font-size: 11px;
+  color: white !important;
+  text-decoration: none !important;
+}
+
+.button_gen_small:hover {
+  height: 20px !important;
+  width: auto !important;
+  min-width: auto !important;
+  border-radius: 4px !important;
+  padding: 3px 5px 5px 5px !important;
+  margin: 2px !important;
+  font-weight: normal !important;
+  font-size: 12px !important;
+}
+
+/* button_gen基础类 - 完全匹配Merlin固件样式 */
+.button_gen {
+  font-weight: bolder !important;
+  text-shadow: 1px 1px 0px black !important;
+  background: #121C1E !important;
+  background: -webkit-linear-gradient(#233438 0%, #0F1011 100%) !important;
+  background: -o-linear-gradient(#233438 0%, #0F1011 100%) !important;
+  background: linear-gradient(#233438 0%, #0F1011 100%) !important;
+  border-radius: 8px !important;
+  border: 0 !important;
+  color: #FFFFFF !important;
+  height: 33px !important;
+  font-family: Verdana, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif !important;
+  font-size: 12px !important;
+  padding: 0 .70em 0 .70em !important;
+  width: auto !important;
+  min-width: 122px !important;
+  overflow: visible !important;
+  cursor: pointer !important;
+  outline: none !important;
+  white-space: normal !important;
+  word-break: break-all !important;
+  margin: 0 8px !important;
+}
+
+.button_gen:hover {
+  font-weight: bolder !important;
+  text-shadow: 1px 1px 0px black !important;
+  background: #2a3e42 !important;
+  background: -webkit-linear-gradient(#3a4e52 0%, #1a2426 100%) !important;
+  background: -o-linear-gradient(#3a4e52 0%, #1a2426 100%) !important;
+  background: linear-gradient(#3a4e52 0%, #1a2426 100%) !important;
+  border-radius: 8px !important;
+  border: 0 !important;
+  color: #FFFFFF !important;
+  height: 33px !important;
+  font-family: Verdana, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif !important;
+  font-size: 12px !important;
+  padding: 0 .70em 0 .70em !important;
+  width: auto !important;
+  min-width: 122px !important;
+  overflow: visible !important;
+  cursor: pointer !important;
+  outline: none !important;
+  white-space: normal !important;
+  word-break: break-all !important;
+  margin: 0 8px !important;
+}
+
+/* 警告框样式 */
+.merlin-alert {
+  background: rgba(255, 204, 0, 0.15);
+  border: 2px solid var(--merlin-primary);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  color: var(--merlin-text-primary);
+  backdrop-filter: blur(5px);
+  position: relative;
+  overflow: hidden;
+}
+
+.merlin-alert::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 204, 0, 0.1), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.merlin-alert-icon {
+  color: var(--merlin-primary);
+  margin-right: 10px;
+  font-weight: bold;
+  font-size: 18px;
+  text-shadow: 0 0 8px rgba(255, 204, 0, 0.6);
+}
+
+/* 状态指示器 */
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  position: relative;
+}
+
+.status-enabled {
+  background: #4caf50;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.8);
+}
+
+.status-enabled::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+.status-disabled {
+  background: #f44336;
+  box-shadow: 0 0 12px rgba(244, 67, 54, 0.8);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.8); }
+}
+
+/* 提示文本 - 删除红点 */
+.hint-text {
+  color: var(--merlin-primary);
+}
+
+/* ========== 华硕路由器FormTable样式 ========== */
+/* 主表格样式 - 完全匹配华硕路由器FormTable */
+.FormTable {
+  font-size: 12px;
+  font-family: Arial, Helvetica, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif;
+  border: 1px solid #000000;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.FormTable th {
+  font-family: Arial, Helvetica, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif;
+  background-color: #1F2D35;
+  color: #FFFFFF;
+  font-weight: normal;
+  line-height: 15px;
+  height: 30px;
+  text-align: left;
+  font-size: 12px;
+  width: 35%;
+  padding-left: 10px;
+  border: 1px solid #222;
+  border-collapse: collapse;
+  background: #2F3A3E;
+}
+
+.FormTable thead td {
+  color: #FFF;
+  font-size: 12px;
+  background-color: #4D595D;
+  text-align: left;
+  font-weight: bolder;
+  border: 1px solid #222;
+  padding: 3px;
+  padding-left: 10px;
+  border-collapse: collapse;
+  background: #92A0A5;
+  background: -moz-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #92A0A5), color-stop(100%, #66757C));
+  background: -webkit-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: -o-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: -ms-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: linear-gradient(to bottom, #92A0A5 0%, #66757C 100%);
+}
+
+.FormTable thead th {
+  color: #000000;
+  font-size: 12px;
+  text-align: center;
+  font-weight: normal;
+  border: 1px solid #222;
+  border-collapse: collapse;
+}
+
+.FormTable td {
+  padding-left: 10px;
+  background-color: #475A5F;
+  border: 1px solid #222;
+  border-collapse: collapse;
+  color: #FFFFFF;
+  height: 30px;
+}
+
+.FormTable td span {
+  background-color: #475a5f;
+  color: #FFCC00;
+}
+
+/* 列表表格样式 - 用于数据列表 */
+.FormTable_table {
+  margin-top: 10px;
+  font-size: 12px;
+  font-family: Arial, Helvetica, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif;
+  border: 1px solid #222;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.FormTable_table th {
+  font-family: Arial, Helvetica, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif;
+  background-color: #1f2d35;
+  font-weight: normal;
+  text-align: center;
+  font-size: 12px;
+  height: 25px;
+  border: 1px solid #222;
+  border-collapse: collapse;
+  background: #2F3A3E;
+  color: #FFFFFF;
+}
+
+.FormTable_table th.select_table {
+  width: 100px;
+  text-align: center;
+}
+
+.FormTable_table td.select_table {
+  width: 150px;
+  text-align: left;
+}
+
+.FormTable_table th.edit_table {
+  width: 110px;
+  text-align: center;
+}
+
+.FormTable_table td {
+  background-color: #475a5f;
+  text-align: center;
+  border: 1px solid #222;
+  border-collapse: collapse;
+  color: #FFFFFF;
+  padding: 5px;
+}
+
+.FormTable_table td span {
+  color: #FFCC00;
+}
+
+.FormTable_table thead td {
+  color: #FFF;
+  font-size: 12px;
+  background-color: #4D595D;
+  text-align: left;
+  font-weight: bolder;
+  border: 1px solid #222;
+  padding: 3px;
+  border-collapse: collapse;
+  padding-left: 10px;
+  background: #92A0A5;
+  background: -moz-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #92A0A5), color-stop(100%, #66757C));
+  background: -webkit-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: -o-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: -ms-linear-gradient(top, #92A0A5 0%, #66757C 100%);
+  background: linear-gradient(to bottom, #92A0A5 0%, #66757C 100%);
+}
+
+.FormTable_table thead th {
+  width: 98px;
+  color: #000000;
+  font-size: 12px;
+  background-color: #1F2D35;
+  text-align: center;
+  font-weight: normal;
+  border: 1px solid #222;
+  border-collapse: collapse;
+}
+
+/* 表格文本样式 */
+.table_text {
+  color: #FFFFFF;
+  font-family: Arial, Helvetica, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif;
+  text-decoration: none;
+}
+
+/* 无规则表格单元格 */
+.tableNoRule {
+  border: none !important;
+  background: transparent !important;
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* 输入框在表格中的样式 */
+.FormTable input[type="text"],
+.FormTable input[type="password"],
+.FormTable input[type="number"],
+.FormTable select {
+  background-color: #2F3A3E;
+  border: 1px solid #4D595D;
+  color: #FFFFFF;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: Arial, Helvetica, MS UI Gothic, MS P Gothic, Microsoft Yahei UI, sans-serif;
+  border-radius: 2px;
+}
+
+.FormTable input[type="text"]:focus,
+.FormTable input[type="password"]:focus,
+.FormTable input[type="number"]:focus,
+.FormTable select:focus {
+  border-color: #FFCC00;
+  outline: none;
+  box-shadow: 0 0 3px rgba(255, 204, 0, 0.3);
+}
+
+/* 表格中的复选框样式 */
+.FormTable input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+/* 表格行悬停效果 */
+.FormTable_table tbody tr:hover {
+  background-color: rgba(255, 204, 0, 0.1);
+}
+
+.FormTable_table tbody tr:hover td {
+  background-color: rgba(255, 204, 0, 0.1);
+}
+
+/* 表格操作按钮 */
+.table-action-btn {
+  background: #596d74;
+  border: 1px solid #929ea1;
+  color: white;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin: 0 2px;
+}
+
+.table-action-btn:hover {
+  background: #6a7a81;
+  border-color: #a3afb2;
+}
+
+.table-action-btn.delete {
+  background: #d32f2f;
+  border-color: #b71c1c;
+}
+
+.table-action-btn.delete:hover {
+  background: #f44336;
+  border-color: #d32f2f;
+  font-size: 12px;
+  margin-top: 4px;
+  padding-left: 0;
+}
+
+/* 表单区域 - 紧凑排布 */
+.form-section {
+  background: var(--merlin-bg-panel);
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--merlin-border-light);
+}
+
+/* 表单项区分样式 */
+.form-item-primary {
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.05) 0%, rgba(255, 204, 0, 0.02) 100%);
+  border: 1px solid rgba(255, 204, 0, 0.2);
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.form-item-secondary {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(76, 175, 80, 0.02) 100%);
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.form-item-tertiary {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.02) 100%);
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.form-item-quaternary {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.05) 0%, rgba(156, 39, 176, 0.02) 100%);
+  border: 1px solid rgba(156, 39, 176, 0.2);
+  border-radius: 6px;
+  padding: 15px;
+}
+
+/* 表单组 - 紧凑排布 */
+.merlin-form-group {
+  margin-bottom: 12px;
+}
+
+.merlin-form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: normal;
+  color: var(--merlin-text-primary);
+  font-size: 13px;
+}
+
+/* iPhone开关样式 - 华硕路由器原生风格 */
+.iphone_switch_container {
+  height: 32px;
+  width: 74px;
+  position: relative;
+  overflow: hidden;
+  margin: 0 12px 0 24px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.iphone_switch_container label {
+  cursor: pointer;
+}
+
+/* 华硕原生开关图片样式 */
+.iphone_switch {
+  border-radius: 7px;
+  height: 32px;
+  width: 74px;
+  background-image: url('./iphone_switch.svg');
+  background-repeat: no-repeat;
+  background-position: 0px center;
+  background-size: 148px 32px;
+  transition: background-position 0.3s ease;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: pointer;
+}
+
+/* 开关关闭状态 */
+.iphone_switch.off {
+  background-position: -37px center;
+}
+
+/* 开关开启状态 */
+.iphone_switch.on {
+  background-position: 0px center;
+}
+
+/* 移除原有的开关样式 */
+.iphone_switch_bg,
+.iphone_switch_circle {
+  display: none;
+}
+
+/* 华硕梅林原生按钮样式 */
+.asus-button {
+  background: linear-gradient(to bottom, #FFFFFF 0%, #F3F3F3 50%, #EDEDED 51%, #FFFFFF 100%);
+  border: 1px solid #CCCCCC;
+  border-radius: 3px;
+  color: #333333;
+  cursor: pointer;
+  display: inline-block;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  margin: 0;
+  outline: none;
+  padding: 6px 12px;
+  text-align: center;
+  text-decoration: none;
+  text-shadow: 0 1px 0 #FFFFFF;
+  vertical-align: baseline;
+  white-space: nowrap;
+  min-width: 60px;
+  transition: all 0.2s ease;
+}
+
+.asus-button:hover {
+  background: linear-gradient(to bottom, #F8F8F8 0%, #E8E8E8 50%, #D8D8D8 51%, #F0F0F0 100%);
+  border-color: #AAAAAA;
+  color: #222222;
+}
+
+.asus-button:active {
+  background: linear-gradient(to bottom, #E8E8E8 0%, #D8D8D8 50%, #C8C8C8 51%, #E0E0E0 100%);
+  border-color: #999999;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.asus-button:focus {
+  border-color: #0066CC;
+  box-shadow: 0 0 3px rgba(0,102,204,0.5);
+}
+
+/* 华硕路由器表单标题样式 */
+.formfonttitle_nwm {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+/* 华硕路由器水平分割线 */
+.line_horizontal {
+  height: 1px;
+  background-color: #ddd;
+  border: none;
+  margin: 0;
+  width: 100%;
+}
+
+/* 华硕梅林原生 div 按钮样式 */
+.titlebtn {
+  background: #121C1E;
+  background: -webkit-linear-gradient(#233438 0%, #0F1011 100%);
+  background: -o-linear-gradient(#233438 0%, #0F1011 100%);
+  background: linear-gradient(#233438 0%, #0F1011 100%);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-block;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  margin: 0;
+  margin-right: 10px;
+  outline: none;
+  padding-right: 10px;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: baseline;
+  white-space: nowrap;
+  min-width: 136px;
+  height: 34px;
+  width: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.titlebtn:hover {
+  background: #085F96;
+  background: -webkit-linear-gradient(#09639C 0%, #003047 100%);
+  background: -o-linear-gradient(#09639C 0%, #003047 100%);
+  background: linear-gradient(#09639C 0%, #003047 100%);
+  color: #fff;
+}
+
+.titlebtn:active {
+  background: linear-gradient(to bottom, #E8E8E8 0%, #D8D8D8 50%, #C8C8C8 51%, #E0E0E0 100%);
+  border-color: #999999;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.titlebtn.disabled {
+  background: #666666;
+  background: -webkit-linear-gradient(#777777 0%, #555555 100%);
+  background: -o-linear-gradient(#777777 0%, #555555 100%);
+  background: linear-gradient(#777777 0%, #555555 100%);
+  color: #aaa;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.titlebtn.disabled:hover {
+  background: #666666;
+  background: -webkit-linear-gradient(#777777 0%, #555555 100%);
+  background: -o-linear-gradient(#777777 0%, #555555 100%);
+  background: linear-gradient(#777777 0%, #555555 100%);
+  color: #aaa;
+}
+
+.titlebtn span {
+  display: block;
+  padding: 5px 1px 5px 11px;
+  height: 24px;
+  line-height: 22px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.iphone_switch {
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* 开关按钮容器 */
+.left {
+  transition: all 0.2s ease;
+}
+
+.left:hover {
+  transform: translateY(-2px);
+}
+
+.left:active {
+  transform: translateY(0px);
+}
+
+.section-title {
+  color: var(--merlin-primary);
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--merlin-border);
+  text-shadow: 2px 2px 4px var(--merlin-shadow);
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 50px;
+  height: 2px;
+  background: var(--merlin-primary);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.6);
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(255, 204, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); }
+}
+
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .merlin-container {
+    padding: 10px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 15px;
+  }
+  
+  .form-label {
+    min-width: auto;
+    margin-bottom: 8px;
+    margin-right: 0;
+  }
+  
+  .merlin-button {
+    width: 100%;
+    margin-bottom: 10px;
+    margin-right: 0;
+  }
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--merlin-bg-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--merlin-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e6b800;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  border: 3px solid var(--merlin-bg-light);
+  border-top: 3px solid var(--merlin-primary);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+}
