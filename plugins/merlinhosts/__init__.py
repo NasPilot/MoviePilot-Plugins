@@ -28,9 +28,9 @@ class MerlinHosts(_PluginBase):
     # 插件描述
     plugin_desc = "定时将本地Hosts同步至华硕梅林路由器的/jffs/configs/hosts.add文件。"
     # 插件图标
-    plugin_icon = "merlin.png"
+    plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png"
     # 插件版本
-    plugin_version = "0.4"
+    plugin_version = "0.5"
     # 插件作者
     plugin_author = "NasPilot"
     # 插件作者主页
@@ -38,7 +38,7 @@ class MerlinHosts(_PluginBase):
     # 插件配置项ID前缀
     plugin_config_prefix = "merlinhosts_"
     # 加载顺序
-    plugin_order = 63
+    plugin_order = 42
     # 可使用的用户级别
     auth_level = 1
 
@@ -736,7 +736,7 @@ class MerlinHosts(_PluginBase):
     @staticmethod
     def __get_local_hosts() -> list:
         """
-        获取本地hosts文件的内容
+        获取本地hosts文件的内容，过滤掉moviepilot相关条目
         """
         try:
             logger.info("正在获取本地hosts")
@@ -749,8 +749,24 @@ class MerlinHosts(_PluginBase):
                 local_hosts = file.readlines()
             # 去除换行符
             local_hosts = [line.rstrip('\n\r') for line in local_hosts]
-            logger.info(f"本地hosts文件读取成功: {len(local_hosts)}行")
-            return local_hosts
+            
+            # 过滤掉moviepilot相关的hosts条目
+            filtered_hosts = []
+            for line in local_hosts:
+                # 保留注释行和空行
+                if line.strip().startswith('#') or not line.strip():
+                    filtered_hosts.append(line)
+                    continue
+                
+                # 检查是否包含moviepilot域名
+                if 'moviepilot' in line.lower():
+                    logger.info(f"过滤掉moviepilot相关条目: {line.strip()}")
+                    continue
+                
+                filtered_hosts.append(line)
+            
+            logger.info(f"本地hosts文件读取成功: {len(local_hosts)}行，过滤后: {len(filtered_hosts)}行")
+            return filtered_hosts
         except Exception as e:
             logger.error(f"读取本地hosts文件失败: {e}")
             return []
