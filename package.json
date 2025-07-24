@@ -74,7 +74,7 @@
     "name": "梅林路由Hosts",
     "description": "定时将本地Hosts同步至华硕梅林路由器的/jffs/configs/hosts.add文件。",
     "labels": "Hosts, 路由, Merlin",
-    "version": "0.4",
+    "version": "0.5",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png",
     "author": "NasPilot",
     "level": 1,
