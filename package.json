@@ -72,15 +72,16 @@
   },
   "MerlinHosts": {
     "name": "梅林路由Hosts",
-    "description": "定时将本地Hosts同步至华硕梅林路由Hosts。",
+    "description": "定时将本地Hosts同步至华硕梅林路由器的/jffs/configs/hosts.add文件。",
     "labels": "Hosts, 路由, Merlin",
-    "version": "1.0",
+    "version": "0.2",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png",
     "author": "NasPilot",
     "level": 1,
     "v2": true,
     "history": {
-      "v1.0": "初始版本, 支持同步Hosts到梅林路由并重启dnsmasq。"
+      "v0.2": "新增智能合并功能，保留路由器现有hosts条目，优化同步策略和代码结构。",
+      "v0.1": "初始版本, 支持同步Hosts到梅林路由并重启dnsmasq。"
     }
   },
   "TransWord": {

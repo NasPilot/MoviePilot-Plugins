@@ -26,11 +26,11 @@ class MerlinHosts(_PluginBase):
     # 插件名称
     plugin_name = "梅林路由Hosts"
     # 插件描述
-    plugin_desc = "通过SSH连接定时将本地Hosts同步至华硕梅林路由器，支持密码和密钥认证。"
+    plugin_desc = "定时将本地Hosts同步至华硕梅林路由器的/jffs/configs/hosts.add文件。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "0.2"
     # 插件作者
     plugin_author = "NasPilot"
     # 插件作者主页
@@ -150,9 +150,265 @@ class MerlinHosts(_PluginBase):
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """
-        拼装插件配置页面 - Vue模式下返回空配置
+        拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
-        return [], {
+        return [
+            {
+                'component': 'VForm',
+                'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                            'hint': '开启后插件将处于激活状态',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'notify',
+                                            'label': '发送通知',
+                                            'hint': '是否在特定事件发生时发送通知',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                            'hint': '插件将立即运行一次',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cron',
+                                            'label': '执行周期',
+                                            'placeholder': '5位cron表达式',
+                                            'hint': '使用cron表达式指定执行周期，如 0 8 * * *',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'router_ip',
+                                            'label': '路由器IP地址',
+                                            'placeholder': '192.168.1.1',
+                                            'hint': '请输入华硕梅林路由器的IP地址',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'ssh_port',
+                                            'label': 'SSH端口',
+                                            'placeholder': '22',
+                                            'hint': '请输入SSH端口号，默认为22',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'username',
+                                            'label': '用户名',
+                                            'placeholder': 'admin',
+                                            'hint': '请输入SSH登录用户名，通常为admin',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'password',
+                                            'label': '密码',
+                                            'hint': '请输入SSH登录密码',
+                                            'persistent-hint': True,
+                                            'type': 'password'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'private_key_path',
+                                            'label': '私钥文件路径',
+                                            'hint': 'SSH私钥文件路径（可选，优先使用私钥）',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'ignore',
+                                            'label': '忽略的IP或域名',
+                                            'hint': '如：10.10.10.1|wiki.movie-pilot.org',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '注意：本插件通过SSH连接华硕梅林路由器，需要开启SSH服务并配置正确的登录凭据'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'warning',
+                                            'variant': 'tonal',
+                                            'text': '注意：插件会将hosts条目写入/jffs/configs/hosts.add文件并重启dnsmasq服务，请确保路由器已开启JFFS分区'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ], {
             "enabled": False,
             "notify": True,
             "cron": "0 6 * * *",
@@ -164,155 +420,191 @@ class MerlinHosts(_PluginBase):
             "ignore": ""
         }
 
-    def get_render_mode(self) -> Tuple[str, str]:
-        """
-        获取渲染模式
-        """
-        return "vue", "dist/assets"
-
     def get_page(self) -> List[dict]:
         pass
 
     def sync_hosts_to_merlin(self):
         """
-        同步本地hosts到梅林路由器
+        获取本地hosts并更新到梅林路由器
         """
-        # 检查必要的配置
-        if not self._router_ip or not self._username:
-            self.__send_message(title="【梅林路由Hosts更新】", text="路由器IP地址或用户名未配置，请检查配置")
-            return
-
-        # 获取本地hosts文件内容
         local_hosts = self.__get_local_hosts()
         if not local_hosts:
             self.__send_message(title="【梅林路由Hosts更新】", text="获取本地hosts失败，更新失败，请检查日志")
             return
 
-        # 过滤和格式化hosts条目
-        formatted_hosts = self.__format_hosts(local_hosts)
-        if not formatted_hosts:
-            logger.info("没有有效的hosts条目需要同步")
-            self.__send_message(title="【梅林路由Hosts更新】", text="没有有效的hosts条目需要同步")
+        # 获取路由器当前hosts
+        remote_hosts = self.__fetch_remote_hosts()
+
+        # 合并hosts
+        updated_hosts = self.__merge_hosts_with_local(local_hosts, remote_hosts)
+        if not updated_hosts:
+            logger.info("没有需要更新的hosts，跳过")
             return
 
-        # 通过SSH连接到梅林路由器并同步hosts
-        if self.__sync_hosts_via_ssh(formatted_hosts):
-            self.__send_message(title="【梅林路由Hosts更新】", text="同步hosts到梅林路由器成功")
-        else:
-            self.__send_message(title="【梅林路由Hosts更新】", text="同步hosts到梅林路由器失败，请检查日志")
+        # 更新路由器hosts
+        self.__update_router_hosts(updated_hosts)
 
-    def __format_hosts(self, hosts: list) -> list:
+    def __fetch_remote_hosts(self) -> list:
         """
-        格式化hosts条目，过滤掉不需要的条目
+        通过SSH获取路由器当前的hosts.add文件内容
+        """
+        logger.info("正在获取路由器hosts.add文件")
+        try:
+            ssh_client = self.__create_ssh_connection()
+            if not ssh_client:
+                return []
+
+            stdin, stdout, stderr = ssh_client.exec_command("cat /jffs/configs/hosts.add 2>/dev/null || echo ''")
+            remote_hosts = stdout.read().decode('utf-8').splitlines()
+            ssh_client.close()
+
+            logger.info(f"获取路由器hosts.add成功: {len(remote_hosts)}行")
+            return remote_hosts
+        except Exception as e:
+            logger.error(f"获取路由器hosts.add失败: {e}")
+            return []
+
+    def __merge_hosts_with_local(self, local_hosts: list, remote_hosts: list) -> list:
+        """
+        合并本地hosts和路由器hosts，保留原有hosts条目，只更新或新增本地hosts中的域名
         """
         try:
             ignore = self._ignore.split("|") if self._ignore else []
             ignore.extend(["localhost"])
 
-            formatted_hosts = []
-            for line in hosts:
+            # 保留路由器hosts的所有内容，并建立域名映射
+            merged_hosts = []
+            hostname_to_line_index = {}  # 域名到行索引的映射
+            local_updates = {}  # 本地hosts中需要更新的域名映射
+
+            # 首先处理远程hosts，保留所有内容
+            for line in remote_hosts:
+                line_stripped = line.strip()
+                merged_hosts.append(line)  # 保留原始格式的行
+
+                # 如果是有效的hosts条目，记录域名到行索引的映射
+                if not line_stripped.startswith('#') and line_stripped and (" " in line_stripped or "\t" in line_stripped):
+                    parts = re.split(r'\s+', line_stripped)
+                    if len(parts) > 1:
+                        ip, hostname = parts[0], parts[1]
+                        if not self.__should_ignore_ip(ip) and hostname not in ignore and ip not in ignore:
+                            hostname_to_line_index[hostname] = len(merged_hosts) - 1
+
+            # 处理本地hosts，收集需要更新或新增的条目
+            for line in local_hosts:
                 line = line.lstrip("\ufeff").strip()
-                if line.startswith("#") or any(ign in line for ign in ignore):
+                if line.startswith("#") or any(ign in line for ign in ignore) or not line:
                     continue
                 parts = re.split(r'\s+', line)
                 if len(parts) < 2:
                     continue
                 ip, hostname = parts[0], parts[1]
                 if not self.__should_ignore_ip(ip) and hostname not in ignore and ip not in ignore:
-                    formatted_hosts.append(f"{ip}\t{hostname}")
+                    local_updates[hostname] = f"{ip}\t{hostname}"
 
-            logger.info(f"格式化后的hosts为: {formatted_hosts}")
-            return formatted_hosts
+            # 更新已存在的域名条目
+            for hostname, new_line in local_updates.items():
+                if hostname in hostname_to_line_index:
+                    # 更新现有条目
+                    line_index = hostname_to_line_index[hostname]
+                    merged_hosts[line_index] = new_line
+                    logger.info(f"更新域名 {hostname} 的hosts条目")
+                else:
+                    # 新增条目
+                    merged_hosts.append(new_line)
+                    logger.info(f"新增域名 {hostname} 的hosts条目")
+
+            logger.info(f"合并后的hosts共{len(merged_hosts)}行，更新了{len(local_updates)}个域名")
+            return merged_hosts
+
         except Exception as e:
-            logger.error(f"格式化hosts失败: {e}")
+            logger.error(f"合并hosts失败: {e}")
             return []
 
-    @retry(Exception, logger=logger)
-    def __sync_hosts_via_ssh(self, hosts: list) -> bool:
+
+
+    def __update_router_hosts(self, hosts_content: list):
         """
-        通过SSH连接到梅林路由器并同步hosts
+        通过SSH更新路由器的hosts.add文件
         """
-        ssh_client = None
+        message_title = "【梅林路由Hosts更新】"
         try:
-            # 创建SSH客户端
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            
-            # 连接到路由器
-            logger.info(f"正在连接到梅林路由器 {self._router_ip}:{self._ssh_port}")
-            
-            # 准备认证参数
-            connect_kwargs = {
-                'hostname': self._router_ip,
-                'port': self._ssh_port,
-                'username': self._username,
-                'timeout': 30
-            }
-            
-            # 选择认证方式
-            if self._private_key_path and self._private_key_path.strip():
-                # 使用私钥认证
-                try:
-                    private_key = paramiko.RSAKey.from_private_key_file(self._private_key_path)
-                    connect_kwargs['pkey'] = private_key
-                    logger.info("使用私钥认证")
-                except Exception as e:
-                    logger.error(f"加载私钥失败: {e}")
-                    if self._password:
-                        connect_kwargs['password'] = self._password
-                        logger.info("私钥认证失败，回退到密码认证")
-                    else:
-                        return False
-            elif self._password:
-                # 使用密码认证
-                connect_kwargs['password'] = self._password
-                logger.info("使用密码认证")
-            else:
-                logger.error("未提供有效的认证方式（密码或私钥）")
-                return False
-            
-            # 建立SSH连接
-            ssh_client.connect(**connect_kwargs)
-            logger.info("SSH连接建立成功")
-            
-            # 准备hosts内容
-            hosts_content = "\n".join(hosts) + "\n"
-            logger.info(f"准备写入的hosts内容:\n{hosts_content}")
-            
+            ssh_client = self.__create_ssh_connection()
+            if not ssh_client:
+                message_text = "SSH连接失败，无法更新路由器hosts"
+                logger.error(message_text)
+                self.__send_message(title=message_title, text=message_text)
+                return
+
             # 创建配置目录（如果不存在）
-            stdin, stdout, stderr = ssh_client.exec_command("mkdir -p /jffs/configs")
-            stdout.read()
-            
-            # 备份现有的hosts.add文件
-            stdin, stdout, stderr = ssh_client.exec_command("cp /jffs/configs/hosts.add /jffs/configs/hosts.add.bak 2>/dev/null || true")
-            stdout.read()
-            
+            ssh_client.exec_command("mkdir -p /jffs/configs")
+
+            # 先备份原始hosts.add文件
+            ssh_client.exec_command("cp /jffs/configs/hosts.add /jffs/configs/hosts.add.backup 2>/dev/null || true")
+
+            # 创建新的hosts内容
+            hosts_string = '\n'.join(hosts_content)
+
             # 写入新的hosts.add文件
             sftp = ssh_client.open_sftp()
             with sftp.open('/jffs/configs/hosts.add', 'w') as remote_file:
-                remote_file.write(hosts_content)
+                remote_file.write(hosts_string)
             sftp.close()
-            logger.info("hosts.add文件写入成功")
-            
+
             # 重启dnsmasq服务
-            logger.info("正在重启dnsmasq服务")
             stdin, stdout, stderr = ssh_client.exec_command("service restart_dnsmasq")
-            result = stdout.read().decode('utf-8')
-            error = stderr.read().decode('utf-8')
-            
-            if error:
-                logger.warning(f"重启dnsmasq服务时有警告: {error}")
-            
-            logger.info(f"dnsmasq服务重启完成: {result}")
-            return True
-            
+
+            # 检查是否有错误
+            error_output = stderr.read().decode('utf-8')
+            if error_output:
+                logger.error(f"更新hosts.add文件出错: {error_output}")
+                message_text = f"更新路由器hosts失败: {error_output}"
+            else:
+                logger.info("路由器hosts.add文件更新成功")
+                message_text = "路由器hosts.add文件更新成功"
+
+            ssh_client.close()
+
         except Exception as e:
-            logger.error(f"SSH连接或操作失败: {e}")
-            return False
-        finally:
-            if ssh_client:
-                ssh_client.close()
-                logger.info("SSH连接已关闭")
+            message_text = f"更新路由器hosts异常: {e}"
+            logger.error(message_text)
+
+        self.__send_message(title=message_title, text=message_text)
+
+    def __create_ssh_connection(self):
+        """
+        创建SSH连接
+        """
+        try:
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            # 优先使用私钥认证
+            if self._private_key_path and len(self._private_key_path.strip()) > 0:
+                private_key = paramiko.RSAKey.from_private_key_file(self._private_key_path)
+                ssh_client.connect(
+                    hostname=self._router_ip,
+                    port=self._ssh_port,
+                    username=self._username,
+                    pkey=private_key,
+                    timeout=10
+                )
+            else:
+                # 使用密码认证
+                ssh_client.connect(
+                    hostname=self._router_ip,
+                    port=self._ssh_port,
+                    username=self._username,
+                    password=self._password,
+                    timeout=10
+                )
+
+            logger.info(f"SSH连接成功: {self._router_ip}:{self._ssh_port}")
+            return ssh_client
+
+        except Exception as e:
+            logger.error(f"SSH连接失败: {e}")
+            return None
 
     @staticmethod
     def __get_local_hosts() -> list:
@@ -320,7 +612,7 @@ class MerlinHosts(_PluginBase):
         获取本地hosts文件的内容
         """
         try:
-            logger.info("正在准备获取本地hosts")
+            logger.info("正在获取本地hosts")
             # 确定hosts文件的路径
             if SystemUtils.is_windows():
                 hosts_path = r"c:\windows\system32\drivers\etc\hosts"
@@ -328,7 +620,9 @@ class MerlinHosts(_PluginBase):
                 hosts_path = '/etc/hosts'
             with open(hosts_path, "r", encoding="utf-8") as file:
                 local_hosts = file.readlines()
-            logger.info(f"本地hosts文件读取成功: {local_hosts}")
+            # 去除换行符
+            local_hosts = [line.rstrip('\n\r') for line in local_hosts]
+            logger.info(f"本地hosts文件读取成功: {len(local_hosts)}行")
             return local_hosts
         except Exception as e:
             logger.error(f"读取本地hosts文件失败: {e}")
