@@ -30,7 +30,7 @@ class MerlinHosts(_PluginBase):
     # 插件图标
     plugin_icon = "merlin.png"
     # 插件版本
-    plugin_version = "0.3"
+    plugin_version = "0.4"
     # 插件作者
     plugin_author = "NasPilot"
     # 插件作者主页
@@ -525,50 +525,125 @@ class MerlinHosts(_PluginBase):
 
     def __update_router_hosts(self, hosts_content: list):
         """
-        通过SSH更新路由器的hosts.add文件
+        通过SSH更新路由器的hosts.add文件，增强错误处理和重试机制
         """
         message_title = "【梅林路由Hosts更新】"
-        try:
-            ssh_client = self.__create_ssh_connection()
-            if not ssh_client:
-                message_text = "SSH连接失败，无法更新路由器hosts"
-                logger.error(message_text)
-                self.__send_message(title=message_title, text=message_text)
-                return
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            ssh_client = None
+            sftp = None
+            try:
+                ssh_client = self.__create_ssh_connection()
+                if not ssh_client:
+                    message_text = "SSH连接失败，无法更新路由器hosts"
+                    logger.error(message_text)
+                    self.__send_message(title=message_title, text=message_text)
+                    return
 
-            # 创建配置目录（如果不存在）
-            ssh_client.exec_command("mkdir -p /jffs/configs")
+                # 创建配置目录（如果不存在）
+                stdin, stdout, stderr = ssh_client.exec_command("mkdir -p /jffs/configs")
+                stdout.read()  # 等待命令完成
+                
+                # 先备份原始hosts.add文件
+                stdin, stdout, stderr = ssh_client.exec_command("cp /jffs/configs/hosts.add /jffs/configs/hosts.add.backup 2>/dev/null || true")
+                stdout.read()  # 等待命令完成
 
-            # 先备份原始hosts.add文件
-            ssh_client.exec_command("cp /jffs/configs/hosts.add /jffs/configs/hosts.add.backup 2>/dev/null || true")
+                # 创建新的hosts内容
+                hosts_string = '\n'.join(hosts_content)
+                if not hosts_string.endswith('\n'):
+                    hosts_string += '\n'
 
-            # 创建新的hosts内容
-            hosts_string = '\n'.join(hosts_content)
+                # 使用更稳定的方式写入文件
+                try:
+                    sftp = ssh_client.open_sftp()
+                    # 设置SFTP超时
+                    sftp.get_channel().settimeout(30)
+                    
+                    # 先写入临时文件，然后移动到目标位置
+                    temp_file = '/tmp/hosts.add.tmp'
+                    with sftp.open(temp_file, 'w') as remote_file:
+                        remote_file.write(hosts_string)
+                    
+                    # 移动临时文件到目标位置
+                    stdin, stdout, stderr = ssh_client.exec_command(f"mv {temp_file} /jffs/configs/hosts.add")
+                    stdout.read()  # 等待命令完成
+                    
+                    sftp.close()
+                    sftp = None
+                    
+                except Exception as sftp_error:
+                    logger.warning(f"SFTP写入失败，尝试使用echo命令: {sftp_error}")
+                    if sftp:
+                        sftp.close()
+                        sftp = None
+                    
+                    # 备用方案：使用echo命令写入文件
+                    # 转义特殊字符
+                    escaped_content = hosts_string.replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
+                    stdin, stdout, stderr = ssh_client.exec_command(f'echo "{escaped_content}" > /jffs/configs/hosts.add')
+                    stdout.read()  # 等待命令完成
 
-            # 写入新的hosts.add文件
-            sftp = ssh_client.open_sftp()
-            with sftp.open('/jffs/configs/hosts.add', 'w') as remote_file:
-                remote_file.write(hosts_string)
-            sftp.close()
+                # 验证文件是否写入成功
+                stdin, stdout, stderr = ssh_client.exec_command("wc -l /jffs/configs/hosts.add")
+                line_count_output = stdout.read().decode('utf-8').strip()
+                if line_count_output:
+                    actual_lines = int(line_count_output.split()[0])
+                    expected_lines = len(hosts_content)
+                    logger.info(f"hosts.add文件写入验证: 期望{expected_lines}行，实际{actual_lines}行")
 
-            # 重启dnsmasq服务
-            stdin, stdout, stderr = ssh_client.exec_command("service restart_dnsmasq")
-
-            # 检查是否有错误
-            error_output = stderr.read().decode('utf-8')
-            if error_output:
-                logger.error(f"更新hosts.add文件出错: {error_output}")
-                message_text = f"更新路由器hosts失败: {error_output}"
-            else:
+                # 重启dnsmasq服务
+                stdin, stdout, stderr = ssh_client.exec_command("service restart_dnsmasq")
+                
+                # 等待命令完成并检查结果
+                stdout_output = stdout.read().decode('utf-8')
+                error_output = stderr.read().decode('utf-8')
+                
+                if error_output and "not found" not in error_output.lower():
+                    logger.warning(f"dnsmasq重启警告: {error_output}")
+                
                 logger.info("路由器hosts.add文件更新成功")
                 message_text = "路由器hosts.add文件更新成功"
+                
+                ssh_client.close()
+                self.__send_message(title=message_title, text=message_text)
+                return  # 成功完成，退出重试循环
 
-            ssh_client.close()
-
-        except Exception as e:
-            message_text = f"更新路由器hosts异常: {e}"
-            logger.error(message_text)
-
+            except (paramiko.SSHException, OSError, EOFError) as e:
+                logger.warning(f"更新路由器hosts尝试 {attempt + 1}/{max_retries} 失败: {e}")
+                if attempt < max_retries - 1:
+                    logger.info(f"等待 {retry_delay} 秒后重试...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    message_text = f"更新路由器hosts最终失败: {e}"
+                    logger.error(message_text)
+            except Exception as e:
+                logger.error(f"更新路由器hosts异常: {e}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    message_text = f"更新路由器hosts最终失败: {e}"
+            finally:
+                # 确保资源清理
+                if sftp:
+                    try:
+                        sftp.close()
+                    except:
+                        pass
+                if ssh_client:
+                    try:
+                        ssh_client.close()
+                    except:
+                        pass
+        
+        # 如果所有重试都失败了
+        if 'message_text' not in locals():
+            message_text = "更新路由器hosts失败，已尝试所有重试"
         self.__send_message(title=message_title, text=message_text)
 
     def __create_ssh_connection(self):
