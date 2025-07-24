@@ -28,9 +28,9 @@ class MerlinHosts(_PluginBase):
     # 插件描述
     plugin_desc = "定时将本地Hosts同步至华硕梅林路由器的/jffs/configs/hosts.add文件。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png"
+    plugin_icon = "merlin.png"
     # 插件版本
-    plugin_version = "0.2"
+    plugin_version = "0.3"
     # 插件作者
     plugin_author = "NasPilot"
     # 插件作者主页
@@ -573,38 +573,90 @@ class MerlinHosts(_PluginBase):
 
     def __create_ssh_connection(self):
         """
-        创建SSH连接
+        创建SSH连接，增强错误处理和连接稳定性
         """
-        try:
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                
+                # 设置连接参数以提高稳定性
+                connect_kwargs = {
+                    'hostname': self._router_ip,
+                    'port': self._ssh_port,
+                    'username': self._username,
+                    'timeout': 15,  # 增加超时时间
+                    'banner_timeout': 30,  # 增加banner超时
+                    'auth_timeout': 30,  # 增加认证超时
+                    'allow_agent': False,  # 禁用SSH agent
+                    'look_for_keys': False,  # 禁用自动查找密钥
+                    'compress': False,  # 禁用压缩
+                }
 
-            # 优先使用私钥认证
-            if self._private_key_path and len(self._private_key_path.strip()) > 0:
-                private_key = paramiko.RSAKey.from_private_key_file(self._private_key_path)
-                ssh_client.connect(
-                    hostname=self._router_ip,
-                    port=self._ssh_port,
-                    username=self._username,
-                    pkey=private_key,
-                    timeout=10
-                )
-            else:
-                # 使用密码认证
-                ssh_client.connect(
-                    hostname=self._router_ip,
-                    port=self._ssh_port,
-                    username=self._username,
-                    password=self._password,
-                    timeout=10
-                )
+                # 优先使用私钥认证
+                if self._private_key_path and len(self._private_key_path.strip()) > 0:
+                    try:
+                        # 尝试不同的私钥类型
+                        private_key = None
+                        for key_class in [paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey, paramiko.DSSKey]:
+                            try:
+                                private_key = key_class.from_private_key_file(self._private_key_path)
+                                break
+                            except paramiko.PasswordRequiredException:
+                                logger.error("私钥文件需要密码，请使用无密码的私钥文件")
+                                return None
+                            except Exception:
+                                continue
+                        
+                        if private_key:
+                            connect_kwargs['pkey'] = private_key
+                        else:
+                            logger.error("无法加载私钥文件，请检查文件格式")
+                            return None
+                    except Exception as e:
+                        logger.error(f"加载私钥失败: {e}")
+                        return None
+                else:
+                    # 使用密码认证
+                    connect_kwargs['password'] = self._password
 
-            logger.info(f"SSH连接成功: {self._router_ip}:{self._ssh_port}")
-            return ssh_client
+                # 尝试连接
+                ssh_client.connect(**connect_kwargs)
+                
+                # 测试连接是否正常
+                transport = ssh_client.get_transport()
+                if transport and transport.is_active():
+                    logger.info(f"SSH连接成功: {self._router_ip}:{self._ssh_port} (尝试 {attempt + 1}/{max_retries})")
+                    return ssh_client
+                else:
+                    ssh_client.close()
+                    raise Exception("SSH传输通道未激活")
 
-        except Exception as e:
-            logger.error(f"SSH连接失败: {e}")
-            return None
+            except paramiko.AuthenticationException as e:
+                logger.error(f"SSH认证失败: {e}")
+                return None  # 认证失败不重试
+            except (paramiko.SSHException, OSError, EOFError) as e:
+                logger.warning(f"SSH连接尝试 {attempt + 1}/{max_retries} 失败: {e}")
+                if attempt < max_retries - 1:
+                    logger.info(f"等待 {retry_delay} 秒后重试...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # 指数退避
+                else:
+                    logger.error(f"SSH连接最终失败，已尝试 {max_retries} 次")
+            except Exception as e:
+                logger.error(f"SSH连接异常: {e}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    logger.error(f"SSH连接最终失败: {e}")
+        
+        return None
 
     @staticmethod
     def __get_local_hosts() -> list:
