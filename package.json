@@ -12,6 +12,19 @@
       "v1.0.0": "从媒体整理记录提取识别词"
     }
   },
+  "PlexWarp": {
+    "name": "PlexWarp",
+    "description": "Plex媒体服务器中间件：优化播放Strm文件、提供直链功能，专为Plex设计。",
+    "labels": "Plex, Strm, 媒体服务, 云盘",
+    "version": "0.1.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v0.1.0": "PlexWarp 0.1.0 发布"
+    }
+  },
   "PlexMediaCover": {
     "name": "Plex媒体封面",
     "description": "自动更新Plex媒体库的封面图片，支持仪表盘展示。",
