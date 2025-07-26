@@ -24,15 +24,15 @@ class MediaWarp(_PluginBase):
     # 插件名称
     plugin_name = "MediaWarp"
     # 插件描述
-    plugin_desc = "EmbyServer/Jellyfin 中间件：优化播放 Strm 文件、自定义前端样式、自定义允许访问客户端、嵌入脚本。"
+    plugin_desc = "Plex/EmbyServer/Jellyfin 中间件：优化播放 Strm 文件、自定义前端样式、自定义允许访问客户端、嵌入脚本。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/refs/heads/main/icons/cloud.png"
     # 插件版本
-    plugin_version = "1.0.7"
+    plugin_version = "1.0.8"
     # 插件作者
-    plugin_author = "DDSRem"
+    plugin_author = "DDSRem,NasPilot"
     # 作者主页
-    author_url = "https://github.com/DDSRem"
+    author_url = "https://github.com/NasPilot"
     # 插件配置项ID前缀
     plugin_config_prefix = "mediawarp_"
     # 加载顺序
@@ -43,9 +43,9 @@ class MediaWarp(_PluginBase):
     _mediaserver_helper = None
     _mediaserver = None
     _mediaservers = None
-    _emby_server = None
-    _emby_host = None
-    _emby_apikey = None
+    _server_type = None
+    _server_host = None
+    _server_apikey = None
     # 私有属性
     _scheduler = None
     process = None
@@ -104,18 +104,18 @@ class MediaWarp(_PluginBase):
 
         # 获取媒体服务信息
         if self._mediaserver:
-            emby_servers = self._mediaserver_helper.get_services(
+            media_servers = self._mediaserver_helper.get_services(
                 name_filters=self._mediaserver
             )
 
-            for _, emby_server in emby_servers.items():
-                self._emby_server = emby_server.type
-                self._emby_apikey = emby_server.config.config.get("apikey")
-                self._emby_host = emby_server.config.config.get("host")
-                if self._emby_host.endswith("/"):
-                    self._emby_host = self._emby_host.rstrip("/")
-                if not self._emby_host.startswith("http"):
-                    self._emby_host = "http://" + self._emby_host
+            for _, media_server in media_servers.items():
+                self._server_type = media_server.type
+                self._server_apikey = media_server.config.config.get("apikey") or media_server.config.config.get("token")
+                self._server_host = media_server.config.config.get("host")
+                if self._server_host and self._server_host.endswith("/"):
+                    self._server_host = self._server_host.rstrip("/")
+                if self._server_host and not self._server_host.startswith("http"):
+                    self._server_host = "http://" + self._server_host
 
         self.stop_service()
 
@@ -368,9 +368,7 @@ class MediaWarp(_PluginBase):
                                                                     "value": config.name,
                                                                 }
                                                                 for config in self._mediaserver_helper.get_configs().values()
-                                                                if config.type == "emby"
-                                                                or config.type
-                                                                == "jellyfin"
+                                                                if config.type in ["plex", "emby", "jellyfin"]
                                                             ],
                                                             "hint": "同时只能选择一个",
                                                             "persistent-hint": True,
@@ -393,7 +391,7 @@ class MediaWarp(_PluginBase):
                                                 "component": "VTextarea",
                                                 "props": {
                                                     "model": "media_strm_path",
-                                                    "label": "Emby STRM 媒体库路径",
+                                                    "label": "STRM 媒体库路径",
                                                     "rows": 5,
                                                     "placeholder": "一行一个",
                                                 },
@@ -574,15 +572,35 @@ class MediaWarp(_PluginBase):
             self.__update_config()
             return
 
-        changes = {
+        # 根据服务器类型生成配置
+        if self._server_type == "plex":
+            changes = self.__generate_plex_config()
+        elif self._server_type in ["emby", "jellyfin"]:
+            changes = self.__generate_emby_jellyfin_config()
+        else:
+            logger.error(f"不支持的媒体服务器类型: {self._server_type}")
+            return
+        self.__modify_config(Path(self.__config_path / self.__config_filename), changes)
+
+        Path(self.__config_path).mkdir(parents=True, exist_ok=True)
+        Path(self.__logs_dir).mkdir(parents=True, exist_ok=True)
+
+        self.process = psutil.Popen([self.__mediawarp_path])
+
+        if self.process.is_running():
+            logger.info("MediaWarp 服务成功启动！")
+
+    def __generate_plex_config(self):
+        """
+        生成Plex配置
+        """
+        return {
             "Port": self._port,
             "Logger.AccessLogger.File": True,
             "Logger.AccessLogger.Console": False,
-            "MediaServer.Type": "Jellyfin"
-            if self._emby_server == "jellyfin"
-            else "Emby",
-            "MediaServer.ADDR": self._emby_host,
-            "MediaServer.AUTH": self._emby_apikey,
+            "MediaServer.Type": "Plex",
+            "MediaServer.ADDR": self._server_host,
+            "MediaServer.AUTH": self._server_apikey,
             "Web.Index": bool(
                 Path(self.__config_path / "static" / "index.html").exists()
             ),
@@ -594,18 +612,39 @@ class MediaWarp(_PluginBase):
             "Web.VideoTogether": bool(self._video_together),
             "HTTPStrm.Enable": True,
             "HTTPStrm.FinalURL": True,
-            "HTTPStrm.PrefixList": self._media_strm_path.split("\n"),
+            "HTTPStrm.PrefixList": self._media_strm_path.split("\n") if self._media_strm_path else [],
+            "Subtitle.SRT2ASS": bool(self._srt2ass),
+            # Plex特有配置
+            "Plex.Enable": True,
+            "Plex.RedirectType": "302",
+            "Plex.DirectPlay": True,
+        }
+
+    def __generate_emby_jellyfin_config(self):
+        """
+        生成Emby/Jellyfin配置
+        """
+        return {
+            "Port": self._port,
+            "Logger.AccessLogger.File": True,
+            "Logger.AccessLogger.Console": False,
+            "MediaServer.Type": "Jellyfin" if self._server_type == "jellyfin" else "Emby",
+            "MediaServer.ADDR": self._server_host,
+            "MediaServer.AUTH": self._server_apikey,
+            "Web.Index": bool(
+                Path(self.__config_path / "static" / "index.html").exists()
+            ),
+            "Web.Crx": bool(self._crx),
+            "Web.ActorPlus": bool(self._actor_plus),
+            "Web.FanartShow": bool(self._fanart_show),
+            "Web.Danmaku": bool(self._danmaku),
+            "Web.ExternalPlayerUrl": bool(self._external_player_url),
+            "Web.VideoTogether": bool(self._video_together),
+            "HTTPStrm.Enable": True,
+            "HTTPStrm.FinalURL": True,
+            "HTTPStrm.PrefixList": self._media_strm_path.split("\n") if self._media_strm_path else [],
             "Subtitle.SRT2ASS": bool(self._srt2ass),
         }
-        self.__modify_config(Path(self.__config_path / self.__config_filename), changes)
-
-        Path(self.__config_path).mkdir(parents=True, exist_ok=True)
-        Path(self.__logs_dir).mkdir(parents=True, exist_ok=True)
-
-        self.process = psutil.Popen([self.__mediawarp_path])
-
-        if self.process.is_running():
-            logger.info("MediaWarp 服务成功启动！")
 
     def __modify_config(self, config_path, modifications):
         """
