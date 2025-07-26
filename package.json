@@ -15,14 +15,14 @@
   "PlexWarp": {
     "name": "PlexWarp",
     "description": "Plex媒体服务器中间件：优化播放Strm文件、提供直链功能，专为Plex设计。",
-    "labels": "Plex, Strm, 媒体服务, 云盘",
-    "version": "0.1.0",
+    "labels": "Plex, Strm, 云盘",
+    "version": "1.0.0",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png",
     "author": "NasPilot",
     "level": 1,
     "v2": true,
     "history": {
-      "v0.1.0": "PlexWarp 0.1.0 发布"
+      "v1.0.0": "PlexWarp 1.0.0 发布"
     }
   },
   "PlexMediaCover": {

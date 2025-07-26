@@ -1,33 +1,33 @@
 # PlexWarp 插件
 
-基于 embyExternalUrl 项目的 Plex 媒体服务器中间件，提供 302 重定向播放功能，支持直链播放和媒体流优化。
+基于新版 PlexWarp 项目的 Plex 媒体服务器中间件，提供 302/301 重定向播放功能，支持路径映射、缓存优化和直链播放。
 
 ## 版本信息
 
-- **版本**: 1.0.0
-- **基于**: [bpking1/embyExternalUrl](https://github.com/bpking1/embyExternalUrl) 项目
-- **核心组件**: plex2Alist 二进制文件
+- **版本**: 2.0.0
+- **基于**: [NasPilot/PlexWarp](https://github.com/NasPilot/PlexWarp) 项目
+- **核心组件**: plexwarp 二进制文件
 
 ## 主要特性
 
 ### 🚀 二进制改造方案
-- ✅ 基于 embyExternalUrl 项目的成熟架构
-- ✅ 使用 plex2Alist 二进制文件，无需复杂依赖
+- ✅ 基于新版 PlexWarp 项目的优化架构
+- ✅ 使用 plexwarp 二进制文件，无需复杂依赖
 - ✅ 支持多平台：Linux (amd64/arm64)、macOS (amd64/arm64)、Windows (amd64)
 - ✅ 一键部署，开箱即用
 
 ### 🎯 核心功能
-- **302 重定向**: 优化媒体流传输，减少服务器负载
+- **302/301 重定向**: 优化媒体流传输，减少服务器负载
 - **直链播放**: 支持直接播放模式，提升播放体验
 - **路径映射**: 灵活的媒体路径映射配置
 - **路由缓存**: 智能缓存机制，提升响应速度
 - **SSL 支持**: 可选的 HTTPS 加密传输
 
 ### 🔧 技术架构
-- **Nginx + NJS**: 高性能的反向代理和脚本处理
-- **JavaScript 配置**: 灵活的配置文件格式
+- **PlexWarp 核心**: 高性能的重定向处理引擎
+- **配置文件**: 灵活的配置文件格式
 - **进程管理**: 自动启动、停止、重启和状态监控
-- **自动更新**: 支持自动检查和更新二进制文件
+- **自动更新**: 支持自动检查和更新 plexwarp 二进制文件
 
 ## 安装配置
 
@@ -44,7 +44,7 @@
   - SSL 端口：默认 5007
   - SSL 域名：配置证书域名
 - **自定义服务器 URL**: 用于反向代理场景
-- **自动更新**: 自动检查 plex2Alist 更新
+- **自动更新**: 自动检查 plexwarp 更新
 
 ### 3. 配置示例
 
@@ -83,9 +83,9 @@ const mediaPathMapping = [
 ### 1. 启动服务
 
 插件启用后会自动：
-1. 下载对应平台的 plex2Alist 二进制文件
+1. 下载对应平台的 plexwarp 二进制文件
 2. 生成适配的配置文件
-3. 启动 Nginx 服务
+3. 启动 PlexWarp 服务
 4. 开始处理 Plex 请求
 
 ### 2. 访问地址
@@ -114,10 +114,9 @@ const mediaPathMapping = [
 ```
 plexwarp/
 ├── bin/                    # 二进制文件目录
-│   └── plex2Alist         # 核心可执行文件
+│   └── plexwarp           # 核心可执行文件
 ├── config/                 # 配置文件目录
-│   ├── constant.js        # 主配置文件
-│   └── nginx/             # Nginx 配置
+│   └── config.yaml        # 主配置文件
 └── logs/                   # 日志目录
 ```
 
@@ -179,7 +178,7 @@ plexwarp/
    ```
 2. 验证 Plex 服务器地址配置
 3. 查看详细日志信息
-4. 确保 plex2Alist 二进制文件下载成功
+4. 确保 plexwarp 二进制文件下载成功
 
 ### 302 重定向不生效
 
@@ -254,13 +253,13 @@ grep "ERROR" /path/to/logs/plexwarp.log
 ## 更新日志
 
 ### v2.0.0 (当前版本)
-- 🔄 **重大更新**: 基于 embyExternalUrl 项目重构
-- ✨ 使用 plex2Alist 二进制文件替代原有架构
+- 🔄 **重大更新**: 基于新版 PlexWarp 项目重构
+- ✨ 使用 plexwarp 二进制文件替代原有架构
 - 🚀 优化 302 重定向机制，提升播放性能
-- 🔧 改进配置文件格式，适配 embyExternalUrl 架构
+- 🔧 改进配置文件格式，适配新版 PlexWarp 架构
 - 📝 更新插件描述和配置界面
 - 🐛 修复多项稳定性问题
-- 🎯 支持多平台二进制文件自动下载
+- 🎯 支持多平台 plexwarp 二进制文件自动下载
 - ⚡ 优化路由缓存和响应速度
 
 ### v1.0.0
@@ -271,7 +270,7 @@ grep "ERROR" /path/to/logs/plexwarp.log
 
 ### 自动更新
 - 启用"自动更新"选项
-- 重启插件时自动检查 plex2Alist 更新
+- 重启插件时自动检查 plexwarp 更新
 - 自动备份现有版本
 
 ### 手动更新
@@ -305,18 +304,18 @@ A: 查看日志文件：`MoviePilot数据目录/plugins/plexwarp/logs/plexwarp.l
 
 ## 相关链接
 
-- [embyExternalUrl 项目](https://github.com/bpking1/embyExternalUrl)
+- [PlexWarp 项目](https://github.com/NasPilot/PlexWarp)
 - [MoviePilot 项目](https://github.com/jxxghp/MoviePilot)
 - [Plex 官方文档](https://support.plex.tv/)
 
 ## 许可证
 
-本项目采用 MIT 许可证，详情请参阅 LICENSE 文件。基于的 embyExternalUrl 项目请参考其相应许可证。
+本项目采用 MIT 许可证，详情请参阅 LICENSE 文件。基于的 PlexWarp 项目请参考其相应许可证。
 
 ## 致谢
 
 感谢以下项目和贡献者：
-- [bpking1/embyExternalUrl](https://github.com/bpking1/embyExternalUrl) 项目提供的核心架构
+- [NasPilot/PlexWarp](https://github.com/NasPilot/PlexWarp) 项目提供的核心架构
 - MoviePilot 项目团队
 - Plex 媒体服务器
 - 所有贡献代码和建议的开发者

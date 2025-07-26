@@ -25,11 +25,11 @@ class PlexWarp(_PluginBase):
     # 插件名称
     plugin_name = "PlexWarp"
     # 插件描述
-    plugin_desc = "Plex媒体服务器中间件：优化播放Strm文件、提供直链功能，专为Plex设计。"
+    plugin_desc = "Plex媒体服务器中间件：基于新版PlexWarp，提供302重定向、路径映射、缓存优化等功能，专为Plex设计。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png"
     # 插件版本
-    plugin_version = "0.1.0"
+    plugin_version = "1.0.0"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -58,6 +58,10 @@ class PlexWarp(_PluginBase):
     _media_mount_path = None
     _auto_update = False
     _custom_server_url = None
+    _redirect_type = None
+    _direct_play = None
+    _route_cache = None
+    _base_url = None
 
     def __init__(self):
         """
@@ -72,10 +76,6 @@ class PlexWarp(_PluginBase):
         self.__config_path = settings.PLUGIN_DATA_PATH / class_name / "config"
         # 日志路径
         self.__logs_dir = settings.PLUGIN_DATA_PATH / class_name / "logs"
-        # Nginx配置路径
-        self.__nginx_conf_path = settings.PLUGIN_DATA_PATH / class_name / "nginx"
-        # SSL证书路径
-        self.__ssl_path = settings.PLUGIN_DATA_PATH / class_name / "ssl"
         # 版本文件路径
         self.__version_path = settings.PLUGIN_DATA_PATH / class_name / "version.txt"
         # PlexWarp版本
@@ -85,8 +85,6 @@ class PlexWarp(_PluginBase):
         self.__plexwarp_path.mkdir(parents=True, exist_ok=True)
         self.__config_path.mkdir(parents=True, exist_ok=True)
         self.__logs_dir.mkdir(parents=True, exist_ok=True)
-        self.__nginx_conf_path.mkdir(parents=True, exist_ok=True)
-        self.__ssl_path.mkdir(parents=True, exist_ok=True)
 
     def __get_current_version(self) -> str:
         """
@@ -125,6 +123,10 @@ class PlexWarp(_PluginBase):
             self._media_mount_path = config.get("media_mount_path")
             self._auto_update = config.get("auto_update")
             self._custom_server_url = config.get("custom_server_url")
+            self._redirect_type = config.get("redirect_type") or "302"
+            self._direct_play = config.get("direct_play", True)
+            self._route_cache = config.get("route_cache", True)
+            self._base_url = config.get("base_url") or ""
 
             # 获取媒体服务器
             if self._mediaservers:
@@ -205,6 +207,10 @@ class PlexWarp(_PluginBase):
                 "media_mount_path": self._media_mount_path,
                 "auto_update": self._auto_update,
                 "custom_server_url": self._custom_server_url,
+                "redirect_type": self._redirect_type,
+                "direct_play": self._direct_play,
+                "route_cache": self._route_cache,
+                "base_url": self._base_url,
             }
         )
 
@@ -290,7 +296,7 @@ class PlexWarp(_PluginBase):
                                                         "props": {
                                                             "model": "enabled",
                                                             "label": "启用插件",
-                                                            "hint": "基于embyExternalUrl项目的plex2Alist",
+                                                            "hint": "基于新版PlexWarp项目，提供更好的性能和稳定性",
                                                             "persistent-hint": True,
                                                         },
                                                     }
@@ -546,7 +552,7 @@ class PlexWarp(_PluginBase):
                                                         "props": {
                                                             "model": "auto_update",
                                                             "label": "自动更新",
-                                                            "hint": "重启时自动更新plex2Alist",
+                                                            "hint": "重启时自动更新plexwarp",
                                                             "persistent-hint": True,
                                                         },
                                                     }
@@ -620,7 +626,7 @@ class PlexWarp(_PluginBase):
                                     {
                                         "component": "div",
                                         "props": {"class": "text-subtitle-2 mb-2"},
-                                        "text": "重要配置说明（基于embyExternalUrl项目）：",
+                                        "text": "重要配置说明（基于新版PlexWarp项目）：",
                                     },
                                     {
                                         "component": "div",
@@ -640,7 +646,11 @@ class PlexWarp(_PluginBase):
                                     },
                                     {
                                         "component": "div",
-                                        "text": "5. 支持302重定向和直接播放模式",
+                                        "text": "5. 支持302/301重定向、路径映射和缓存优化",
+                                    },
+                                    {
+                                        "component": "div",
+                                        "text": "6. 新版本提供更好的性能和稳定性",
                                     },
                                 ],
                             },
@@ -662,6 +672,7 @@ class PlexWarp(_PluginBase):
             "redirect_type": "302",
             "direct_play": True,
             "route_cache": True,
+            "base_url": "",
         }
 
     def get_status(self) -> Tuple[bool, str]:
@@ -813,8 +824,11 @@ class PlexWarp(_PluginBase):
             response = requests.get(download_url, timeout=300, proxies=settings.PROXY)
             response.raise_for_status()
             
+            # 确定文件类型和临时文件后缀
+            file_suffix = ".tar.gz" if download_url.endswith(".tar.gz") else ".zip"
+            
             # 保存到临时文件
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as tmp_file:
                 tmp_file.write(response.content)
                 tmp_path = tmp_file.name
             
@@ -824,9 +838,14 @@ class PlexWarp(_PluginBase):
                     shutil.rmtree(self.__plexwarp_path)
                 self.__plexwarp_path.mkdir(parents=True, exist_ok=True)
                 
-                # 解压文件
-                with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
-                    zip_ref.extractall(self.__plexwarp_path)
+                # 根据文件类型解压
+                if file_suffix == ".tar.gz":
+                    import tarfile
+                    with tarfile.open(tmp_path, 'r:gz') as tar_ref:
+                        tar_ref.extractall(self.__plexwarp_path)
+                else:
+                    with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+                        zip_ref.extractall(self.__plexwarp_path)
                 
                 # 设置执行权限
                 for file_path in self.__plexwarp_path.rglob("*"):
@@ -882,22 +901,24 @@ class PlexWarp(_PluginBase):
         获取PlexWarp下载地址
         """
         try:
-            # 使用embyExternalUrl项目的Plex版本二进制文件
+            # 使用新的PlexWarp项目二进制文件
             system = platform.system().lower()
             machine = platform.machine().lower()
             
+            base_url = "https://github.com/NasPilot/PlexWarp/releases/latest/download"
+            
             if system == "linux":
                 if "aarch64" in machine or "arm64" in machine:
-                    return "https://github.com/bpking1/embyExternalUrl/releases/latest/download/plex2Alist_linux_arm64.zip"
+                    return f"{base_url}/PlexWarp-linux-arm64.tar.gz"
                 else:
-                    return "https://github.com/bpking1/embyExternalUrl/releases/latest/download/plex2Alist_linux_amd64.zip"
+                    return f"{base_url}/PlexWarp-linux-amd64.tar.gz"
             elif system == "darwin":
                 if "arm64" in machine:
-                    return "https://github.com/bpking1/embyExternalUrl/releases/latest/download/plex2Alist_darwin_arm64.zip"
+                    return f"{base_url}/PlexWarp-darwin-arm64.tar.gz"
                 else:
-                    return "https://github.com/bpking1/embyExternalUrl/releases/latest/download/plex2Alist_darwin_amd64.zip"
+                    return f"{base_url}/PlexWarp-darwin-amd64.tar.gz"
             elif system == "windows":
-                return "https://github.com/bpking1/embyExternalUrl/releases/latest/download/plex2Alist_windows_amd64.zip"
+                return f"{base_url}/PlexWarp-windows-amd64.zip"
             else:
                 logger.error(f"不支持的系统: {system}")
                 return None
@@ -932,7 +953,7 @@ class PlexWarp(_PluginBase):
             if not self.__ensure_config_structure():
                 return False
                 
-            config_file = self.__config_path / "constant.js"
+            config_file = self.__config_path / "config.yaml"
             
             # 根据容器环境自动选择Plex地址
             plex_host = self._plex_host or "http://localhost:32400"
@@ -950,76 +971,74 @@ class PlexWarp(_PluginBase):
             if not mount_paths:
                 mount_paths = ["/mnt"]
             
-            # 生成路径映射配置
-            media_path_mapping = []
-            for path in mount_paths:
-                media_path_mapping.append({
-                    "from": path,
-                    "to": path
-                })
+            # 生成新PlexWarp的YAML配置文件
+            config_content = f"""# PlexWarp 配置文件
+# 自动生成，请勿手动修改
+# 基于新版PlexWarp项目
+
+# 服务器配置
+server:
+  port: {self._nginx_port}
+  ssl:
+    enabled: {str(self._ssl_enable).lower()}
+    port: {self._nginx_ssl_port if self._ssl_enable else 8443}
+    cert_file: ""
+    key_file: ""
+    domain: "{self._ssl_domain or ''}"
+
+# Plex配置
+plex:
+  url: "{plex_host}"
+  token: ""
+
+# 重定向配置
+redirect:
+  type: "{self._redirect_type}"
+  enabled: true
+  direct_play: {str(self._direct_play).lower()}
+
+# 路径映射配置
+path_mappings:"""
             
-            # 生成embyExternalUrl格式的配置文件
-            config_content = f"""// PlexWarp 配置文件
-// 自动生成，请勿手动修改
-// 基于embyExternalUrl项目的Plex配置
+            # 添加路径映射
+            for i, path in enumerate(mount_paths):
+                config_content += f"""
+  - name: "mapping_{i+1}"
+    from: "{path}"
+    to: "{path}"""
+            
+            config_content += f"""
 
-// Plex服务器地址
-const plexHost = "{plex_host}";
+# 日志配置
+logging:
+  level: "info"
+  file: "logs/plexwarp.log"
+  max_size: 100
+  max_backups: 5
+  max_age: 30
 
-// Nginx监听端口
-const nginxPort = {self._nginx_port};
+# CORS配置
+cors:
+  enabled: true
+  allowed_origins:
+    - "*"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:
+    - "*"
 
-// SSL配置
-const sslEnable = {str(self._ssl_enable).lower()};
-const sslPort = {self._nginx_ssl_port if self._ssl_enable else 'null'};
-const sslDomain = "{self._ssl_domain or ''}";
+# 缓存配置
+cache:
+  enabled: {str(self._route_cache).lower()}
+  ttl: 300
+  max_size: 1000
 
-// 自定义服务器URL（用于反代）
-const customServerUrl = "{self._custom_server_url or ''}";
-
-// 重定向配置
-const redirectConfig = {{
-    enable: true,
-    redirectType: "302",
-    directPlay: true
-}};
-
-// 路由缓存配置
-const routeCacheConfig = {{
-    enable: true,
-    enableL2: false,
-    keyExpression: "r.uri:r.args.path:r.args.mediaIndex:r.args.partIndex"
-}};
-
-// 媒体路径映射
-const mediaPathMapping = {media_path_mapping};
-
-// 路由规则（默认允许所有请求）
-const routeRule = [
-    {{
-        "name": "default",
-        "rule": ["r.uri.includes('/library/parts')", "r.uri.includes('/video/:/transcode')"],
-        "target": "proxy"
-    }}
-];
-
-// 日志配置
-const logLevel = "info";
-
-// 导出配置
-export {{
-    plexHost,
-    nginxPort,
-    sslEnable,
-    sslPort,
-    sslDomain,
-    customServerUrl,
-    redirectConfig,
-    routeCacheConfig,
-    mediaPathMapping,
-    routeRule,
-    logLevel
-}};
+# 基础URL路径
+base_url: "{self._base_url or ''}"
 """
             
             with open(config_file, 'w', encoding='utf-8') as f:
@@ -1046,27 +1065,27 @@ export {{
             # 创建日志目录
             self.__logs_dir.mkdir(parents=True, exist_ok=True)
             
-            # 查找可执行文件（plex2Alist）
+            # 查找可执行文件（plexwarp）
             executable = None
             for file_path in self.__plexwarp_path.rglob("*"):
                 if file_path.is_file() and (
-                    file_path.name.lower().startswith("plex2alist") or 
-                    file_path.name.lower().startswith("medialinker")
+                    file_path.name.lower().startswith("plexwarp") or 
+                    file_path.name.lower() == "plexwarp"
                 ):
                     executable = file_path
                     break
             
             if not executable:
-                logger.error("未找到PlexWarp可执行文件（plex2Alist或MediaLinker）")
+                logger.error("未找到PlexWarp可执行文件")
                 return False
             
             # 确保可执行文件有执行权限
             import stat
             executable.chmod(executable.stat().st_mode | stat.S_IEXEC)
             
-            # 启动命令（embyExternalUrl项目使用-c参数指定配置文件）
-            config_file = self.__config_path / "constant.js"
-            cmd = [str(executable), "-c", str(config_file)]
+            # 启动命令（新PlexWarp使用-config参数指定配置文件）
+            config_file = self.__config_path / "config.yaml"
+            cmd = [str(executable), "-config", str(config_file)]
             
             logger.info(f"启动命令: {' '.join(cmd)}")
             logger.info(f"工作目录: {self.__plexwarp_path}")
