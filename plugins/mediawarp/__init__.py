@@ -76,7 +76,7 @@ class MediaWarp(_PluginBase):
         # 配置文件名
         self.__config_filename = "config.yaml"
         # 二级制文件版本
-        self.__mediawarp_version = "0.1.12"
+        self.__mediawarp_version = "1.1.13"
         self.__mediawarp_version_path = (
             settings.PLUGIN_DATA_PATH / class_name / "version.txt"
         )
@@ -683,7 +683,7 @@ class MediaWarp(_PluginBase):
         """
         获取下载链接
         """
-        base_url = "https://github.com/DDS-Derek/MediaWarp/releases/download/v{version}/MediaWarp_{version}_{os}_{arch}.tar.gz"
+        base_url = "https://github.com/NasPilot/MediaWarp/releases/download/v{version}/MediaWarp_{version}_{os}_{arch}.tar.gz"
 
         machine = platform.machine().lower()
         if machine == "arm64" or machine == "aarch64":

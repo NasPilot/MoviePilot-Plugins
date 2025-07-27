@@ -113,5 +113,26 @@
       "v0.2": "修复插件导入错误，确保与 MoviePilot 最新版本兼容",
       "v0.1": "根据电视剧参数生成识别词，支持集数偏移、替换词、屏蔽词等多种格式"
     }
+  },
+  "MediaWarp": {
+    "name": "MediaWarp",
+    "description": "EmbyServer/Jellyfin 中间件：优化播放 Strm 文件、自定义前端样式、自定义允许访问客户端、嵌入脚本。",
+    "labels": "云盘",
+    "version": "1.0.8",
+    "icon": "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/refs/heads/main/icons/cloud.png",
+    "author": "DDSRem,NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "V1.0.8": "增加 Plex 支持",
+      "v1.0.7": "兼容 MacOS 系统",
+      "v1.0.6": "再修复 URL 编码问题",
+      "v1.0.5": "修复 URL 编码问题",
+      "v1.0.4": "修复配置缺失",
+      "v1.0.3": "修复afusekt播放器无法播放",
+      "v1.0.2": "下载使用MP代理",
+      "v1.0.1": "兼容更多友商STRM文件地址，修复STRM地址编码错误",
+      "v1.0.0": "发布"
+    }
   }
 }
