@@ -423,7 +423,6 @@ class PlexWarp(_PluginBase):
                                         "component": "div",
                                         "text": "• 更多详细配置可以前往 MoviePilot 配置目录找到此插件的配置目录进行配置文件配置",
                                     },
-
                                 ],
                             },
                             {
@@ -447,18 +446,6 @@ class PlexWarp(_PluginBase):
                                         "component": "div",
                                         "text": "• OneStrm、Symedia、q115-strm 等软件生成的 STRM 文件",
                                     },
-                                ],
-                            },
-                            {
-                                "component": "VAlert",
-                                "props": {
-                                    "type": "warning",
-                                    "variant": "tonal",
-                                    "density": "compact",
-                                    "class": "mt-2",
-                                },
-                                "content": [
-
                                 ],
                             },
                         ],
