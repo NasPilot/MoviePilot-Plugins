@@ -264,14 +264,21 @@ class PlexCoverModifier(_PluginBase):
                             }
                         ]
                     }
-                ]
+                ]}
             }
         ], {
             "enabled": self._enabled,
             "cover_path": self._cover_path
         }
 
-    def get_page(self) -> List[dict]:
+    def stop_service(self):
+        """
+        停止插件服务
+        """
+        self._unhook_plex_module()
+        logger.info("Plex封面修改器服务已停止")
+
+    def get_page(self) -> Optional[List[dict]]:
         """插件详情页面"""
         return [
             {
