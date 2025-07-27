@@ -96,7 +96,7 @@ class PlexCoverModifier(_PluginBase):
         Hook Plex模块的mediaserver_librarys方法
         """
         try:
-            from app.modules import ModuleManager
+            from app.core.module import ModuleManager
             plex_module = ModuleManager().get_running_module("PlexModule")
             if plex_module and hasattr(plex_module, 'mediaserver_librarys'):
                 # 保存原始方法
