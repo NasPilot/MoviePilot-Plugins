@@ -124,12 +124,12 @@ class PlexCoverModifier(_PluginBase):
         except Exception as e:
             logger.error(f"取消Hook Plex模块失败: {e}")
     
-    def _modified_mediaserver_librarys(self, hidden: bool = False) -> List[schemas.MediaServerLibrary]:
+    def _modified_mediaserver_librarys(self, server: Optional[str] = None, hidden: Optional[bool] = False, **kwargs) -> Optional[List[schemas.MediaServerLibrary]]:
         """
         修改后的mediaserver_librarys方法
         """
         # 调用原始方法获取媒体库列表
-        libraries = self._original_method(hidden) if self._original_method else []
+        libraries = self._original_method(server, hidden, **kwargs) if self._original_method else []
         
         # 修改封面
         for library in libraries:
