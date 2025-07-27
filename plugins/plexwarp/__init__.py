@@ -423,10 +423,7 @@ class PlexWarp(_PluginBase):
                                         "component": "div",
                                         "text": "• 更多详细配置可以前往 MoviePilot 配置目录找到此插件的配置目录进行配置文件配置",
                                     },
-                                    {
-                                        "component": "div",
-                                        "text": "• PlexWarp 专为 Plex 媒体服务器优化，提供更好的播放体验",
-                                    },
+
                                 ],
                             },
                             {
@@ -461,14 +458,7 @@ class PlexWarp(_PluginBase):
                                     "class": "mt-2",
                                 },
                                 "content": [
-                                    {
-                                        "component": "div",
-                                        "text": "项目致谢：基于 PlexWarp 项目开发",
-                                    },
-                                    {
-                                        "component": "div",
-                                        "text": "项目地址：https://github.com/NasPilot/PlexWarp",
-                                    },
+
                                 ],
                             },
                         ],
