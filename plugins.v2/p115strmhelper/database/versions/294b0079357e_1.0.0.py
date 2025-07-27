@@ -11,13 +11,11 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-
 def upgrade() -> None:
     """
     初始化
     """
     pass
-
 
 def downgrade() -> None:
     """

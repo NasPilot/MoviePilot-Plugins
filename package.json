@@ -12,19 +12,6 @@
       "v1.0.0": "从媒体整理记录提取识别词"
     }
   },
-  "PlexWarp": {
-    "name": "PlexWarp",
-    "description": "Plex媒体服务器中间件：优化播放Strm文件、提供直链功能，专为Plex设计。",
-    "labels": "Plex, Strm, 云盘",
-    "version": "1.0.0",
-    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png",
-    "author": "NasPilot",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.0.0": "PlexWarp 1.0.0 发布"
-    }
-  },
   "PlexMediaCover": {
     "name": "Plex媒体封面",
     "description": "自动更新Plex媒体库的封面图片，支持仪表盘展示。",
@@ -70,7 +57,11 @@
   "AdaptiveIntroSkip": {
     "name": "自适应IntroSkip",
     "description": "通过用户的暂停与播放动作，批量标记片头片尾",
+    "labels": "片头片尾, 批量标记",
     "version": "1.7.8",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/chapter.png",
+    "author": "honue",
+    "level": 1,
     "v2": true,
     "history": {
       "v1.7.8": "修复了一些已知问题",
@@ -78,14 +69,11 @@
       "v1.6": "(火柴总定制版)",
       "v1.5": "时间支持 分:秒 格式",
       "v1.4": "增加用户事件筛选"
-    },
-    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/chapter.png",
-    "author": "honue",
-    "level": 1
+    }
   },
   "MerlinHosts": {
     "name": "梅林路由Hosts",
-    "description": "定时将本地Hosts同步至华硕梅林路由器的/jffs/configs/hosts.add文件。",
+    "description": "同步本地Hosts至梅林固件的/jffs/configs/hosts.add文件。",
     "labels": "Hosts, 路由, Merlin",
     "version": "0.5",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png",
@@ -116,7 +104,7 @@
   },
   "MediaWarp": {
     "name": "MediaWarp",
-    "description": "EmbyServer/Jellyfin 中间件：优化播放 Strm 文件、自定义前端样式、自定义允许访问客户端、嵌入脚本。",
+    "description": "Plex/Emby/Jellyfin 中间件：支持STRM播放，提供302重定向、直链播放功能。",
     "labels": "云盘",
     "version": "1.0.8",
     "icon": "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/refs/heads/main/icons/cloud.png",
@@ -133,6 +121,19 @@
       "v1.0.2": "下载使用MP代理",
       "v1.0.1": "兼容更多友商STRM文件地址，修复STRM地址编码错误",
       "v1.0.0": "发布"
+    }
+  },
+  "PlexWarp": {
+    "name": "PlexWarp",
+    "description": "Plex 中间件：支持STRM播放，提供302重定向、直链播放功能。",
+    "labels": "Plex, Strm, 云盘",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "PlexWarp 1.0.0 发布"
     }
   }
 }

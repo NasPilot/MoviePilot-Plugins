@@ -42,7 +42,7 @@ class PlexMediaCover(_PluginBase):
     # 插件名称
     plugin_name = "Plex媒体封面"
     # 插件描述
-    plugin_desc = "为Plex媒体服务器自动生成媒体库封面，支持多种样式和自定义配置"
+    plugin_desc = "为Plex媒体服务器生成媒体库封面"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png"
     # 插件版本
@@ -54,7 +54,7 @@ class PlexMediaCover(_PluginBase):
     # 插件配置项ID前缀
     plugin_config_prefix = "plexmediacover_"
     # 加载顺序
-    plugin_order = 2
+    plugin_order = 6
     # 可使用的用户级别
     auth_level = 1
 

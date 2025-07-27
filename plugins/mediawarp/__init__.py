@@ -24,19 +24,19 @@ class MediaWarp(_PluginBase):
     # 插件名称
     plugin_name = "MediaWarp"
     # 插件描述
-    plugin_desc = "Plex/EmbyServer/Jellyfin 中间件：优化播放 Strm 文件、自定义前端样式、自定义允许访问客户端、嵌入脚本。"
+    plugin_desc = "Plex/Emby/Jellyfin 中间件：支持STRM播放，提供302重定向、直链播放功能。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/refs/heads/main/icons/cloud.png"
     # 插件版本
     plugin_version = "1.0.8"
     # 插件作者
-    plugin_author = "DDSRem,NasPilot"
+    plugin_author = "DDSRem"
     # 作者主页
-    author_url = "https://github.com/NasPilot"
+    author_url = "https://github.com/DDSRem"
     # 插件配置项ID前缀
     plugin_config_prefix = "mediawarp_"
     # 加载顺序
-    plugin_order = 15
+    plugin_order = 5
     # 可使用的用户级别
     auth_level = 1
 

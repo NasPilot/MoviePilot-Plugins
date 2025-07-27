@@ -26,7 +26,7 @@ class MerlinHosts(_PluginBase):
     # 插件名称
     plugin_name = "梅林路由Hosts"
     # 插件描述
-    plugin_desc = "定时将本地Hosts同步至华硕梅林路由器的/jffs/configs/hosts.add文件。"
+    plugin_desc = "同步本地Hosts至梅林固件的/jffs/configs/hosts.add文件。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png"
     # 插件版本
@@ -38,7 +38,7 @@ class MerlinHosts(_PluginBase):
     # 插件配置项ID前缀
     plugin_config_prefix = "merlinhosts_"
     # 加载顺序
-    plugin_order = 42
+    plugin_order = 13
     # 可使用的用户级别
     auth_level = 1
 
