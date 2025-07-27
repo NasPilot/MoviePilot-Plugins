@@ -2693,19 +2693,34 @@ class PlexMediaCover(_PluginBase):
                         
                         # 检查是否有自定义封面
                         custom_cover_path = None
+                        cover_file_path = None
+                        
+                        # 优先检查输出目录中的封面
                         if self._covers_output:
                             cover_file = Path(self._covers_output) / f"{library.name}.jpg"
                             if cover_file.exists():
-                                # 转换为base64用于显示
-                                try:
-                                    with open(cover_file, "rb") as f:
-                                        cover_data = base64.b64encode(f.read()).decode()
-                                        custom_cover_path = f"data:image/jpeg;base64,{cover_data}"
-                                except Exception as e:
-                                    logger.error(f"读取封面文件失败: {e}")
+                                cover_file_path = cover_file
+                        
+                        # 如果输出目录没有，检查数据目录中的封面
+                        if not cover_file_path:
+                            data_cover_file = self._data_path / "covers" / f"{library.name}.jpg"
+                            if data_cover_file.exists():
+                                cover_file_path = data_cover_file
+                        
+                        # 转换封面为base64
+                        if cover_file_path:
+                            try:
+                                with open(cover_file_path, "rb") as f:
+                                    cover_data = base64.b64encode(f.read()).decode()
+                                    custom_cover_path = f"data:image/jpeg;base64,{cover_data}"
+                            except Exception as e:
+                                logger.error(f"读取封面文件失败: {e}")
                         
                         # 使用自定义封面或默认封面
                         cover_image = custom_cover_path or (library.image_list[0] if library.image_list else None)
+                        
+                        # 获取媒体库统计信息
+                        library_stats = self._get_library_stats(service, library)
                         
                         libraries_data.append({
                             "server": server_name,
@@ -2713,13 +2728,18 @@ class PlexMediaCover(_PluginBase):
                             "type": library.type,
                             "image": cover_image,
                             "link": library.link,
-                            "has_custom_cover": custom_cover_path is not None
+                            "has_custom_cover": custom_cover_path is not None,
+                            "stats": library_stats,
+                            "cover_style": self._cover_style
                         })
             
             # 构建仪表盘组件
             dashboard_elements = []
             
-            # 添加标题
+            # 添加标题和统计信息
+            total_libraries = len(libraries_data)
+            custom_cover_count = sum(1 for lib in libraries_data if lib["has_custom_cover"])
+            
             dashboard_elements.append({
                 "component": "VRow",
                 "content": [{
@@ -2727,8 +2747,16 @@ class PlexMediaCover(_PluginBase):
                     "props": {"cols": 12},
                     "content": [{
                         "component": "div",
-                        "props": {"class": "text-h6 mb-2"},
-                        "text": "我的媒体库"
+                        "props": {"class": "d-flex align-center justify-space-between mb-3"},
+                        "content": [{
+                            "component": "div",
+                            "props": {"class": "text-h6"},
+                            "text": "我的媒体库"
+                        }, {
+                            "component": "div",
+                            "props": {"class": "text-caption text-grey"},
+                            "text": f"共 {total_libraries} 个媒体库，{custom_cover_count} 个已生成自定义封面"
+                        }]
                     }]
                 }]
             })
@@ -2780,16 +2808,59 @@ class PlexMediaCover(_PluginBase):
                             "text": f"{library['server']} • {library['type']}"
                         }]
                         
-                        # 如果有自定义封面，显示标识
+                        # 显示媒体库统计信息
+                        if library["stats"]:
+                            stats_text = []
+                            if library["stats"].get("movie_count", 0) > 0:
+                                stats_text.append(f"电影: {library['stats']['movie_count']}")
+                            if library["stats"].get("tv_count", 0) > 0:
+                                stats_text.append(f"剧集: {library['stats']['tv_count']}")
+                            if library["stats"].get("episode_count", 0) > 0:
+                                stats_text.append(f"集数: {library['stats']['episode_count']}")
+                            
+                            if stats_text:
+                                card_text_content.append({
+                                    "component": "div",
+                                    "props": {"class": "text-caption text-primary mt-1"},
+                                    "text": " | ".join(stats_text)
+                                })
+                        
+                        # 状态标识
+                        chip_row = []
                         if library["has_custom_cover"]:
-                            card_text_content.append({
+                            chip_row.append({
                                 "component": "VChip",
                                 "props": {
                                     "size": "small",
                                     "color": "success",
-                                    "class": "mt-1"
+                                    "class": "mr-1"
                                 },
                                 "text": "自定义封面"
+                            })
+                        
+                        if library["cover_style"]:
+                            style_name = {
+                                "single_1": "单图1",
+                                "single_2": "单图2", 
+                                "multi_1": "多图1",
+                                "multi_2": "多图2",
+                                "multi_3": "多图3"
+                            }.get(library["cover_style"], library["cover_style"])
+                            chip_row.append({
+                                "component": "VChip",
+                                "props": {
+                                    "size": "small",
+                                    "color": "info",
+                                    "variant": "outlined"
+                                },
+                                "text": style_name
+                            })
+                        
+                        if chip_row:
+                            card_text_content.append({
+                                "component": "div",
+                                "props": {"class": "mt-2"},
+                                "content": chip_row
                             })
                         
                         card_content.append({
@@ -2840,6 +2911,511 @@ class PlexMediaCover(_PluginBase):
                     "text": f"获取媒体库信息失败: {str(e)}"
                 }]
             }]
+    
+    def _get_library_stats(self, service, library):
+        """
+        获取媒体库统计信息
+        """
+        try:
+            stats = {"movie_count": 0, "tv_count": 0, "episode_count": 0}
+            
+            if service.type == 'plex':
+                library_id = library.get("key")
+                if library_id:
+                    # 获取Plex媒体库统计
+                    url = f'[HOST]library/sections/{library_id}/all?X-Plex-Token=[APIKEY]'
+                    res = service.instance.get_data(url=url)
+                    if res:
+                        data = res.json()
+                        metadata = data.get("MediaContainer", {}).get("Metadata", [])
+                        
+                        for item in metadata:
+                            item_type = item.get("type")
+                            if item_type == "movie":
+                                stats["movie_count"] += 1
+                            elif item_type == "show":
+                                stats["tv_count"] += 1
+                                # 获取剧集数
+                                show_key = item.get("key")
+                                if show_key:
+                                    episode_url = f'[HOST]{show_key}/allLeaves?X-Plex-Token=[APIKEY]'
+                                    episode_res = service.instance.get_data(url=episode_url)
+                                    if episode_res:
+                                        episode_data = episode_res.json()
+                                        episodes = episode_data.get("MediaContainer", {}).get("Metadata", [])
+                                        stats["episode_count"] += len(episodes)
+            
+            return stats
+        except Exception as e:
+            logger.error(f"获取媒体库统计信息失败: {e}")
+            return None
+
+    def get_dashboard_meta(self) -> List[Dict[str, str]]:
+        """
+        获取仪表盘元信息，支持多个仪表盘视图
+        """
+        return [
+            {
+                "name": "媒体库封面",
+                "key": "library_covers"
+            },
+            {
+                "name": "封面生成状态", 
+                "key": "generation_status"
+            }
+        ]
+    
+    def get_dashboard(self, key: str = "", **kwargs) -> List[dict]:
+        """
+        获取插件仪表盘页面，支持多个视图
+        """
+        if key == "generation_status":
+            return self._get_generation_status_dashboard()
+        else:
+            return self._get_library_covers_dashboard()
+    
+    def _get_library_covers_dashboard(self) -> List[dict]:
+        """
+        获取媒体库封面仪表盘
+        """
+        # 获取所有媒体服务器的媒体库信息
+        libraries_data = []
+        
+        if not self._enabled:
+            return [{
+                "component": "VCard",
+                "props": {
+                    "variant": "tonal",
+                    "class": "mb-3"
+                },
+                "content": [{
+                    "component": "VCardText",
+                    "text": "Plex媒体封面插件未启用"
+                }]
+            }]
+        
+        try:
+            # 获取媒体服务器配置
+            if self._servers:
+                for server_name, service in self._servers.items():
+                    if service.instance.is_inactive():
+                        continue
+                    
+                    # 获取媒体库列表
+                    libraries = self.mschain.librarys(server=server_name)
+                    if not libraries:
+                        continue
+                    
+                    for library in libraries:
+                        # 跳过被排除的媒体库
+                        if (self._exclude_libraries and 
+                            library.name in self._exclude_libraries):
+                            continue
+                        
+                        # 检查是否有自定义封面
+                        custom_cover_path = None
+                        cover_file_path = None
+                        
+                        # 优先检查输出目录中的封面
+                        if self._covers_output:
+                            cover_file = Path(self._covers_output) / f"{library.name}.jpg"
+                            if cover_file.exists():
+                                cover_file_path = cover_file
+                        
+                        # 如果输出目录没有，检查数据目录中的封面
+                        if not cover_file_path:
+                            data_cover_file = self._data_path / "covers" / f"{library.name}.jpg"
+                            if data_cover_file.exists():
+                                cover_file_path = data_cover_file
+                        
+                        # 转换封面为base64
+                        if cover_file_path:
+                            try:
+                                with open(cover_file_path, "rb") as f:
+                                    cover_data = base64.b64encode(f.read()).decode()
+                                    custom_cover_path = f"data:image/jpeg;base64,{cover_data}"
+                            except Exception as e:
+                                logger.error(f"读取封面文件失败: {e}")
+                        
+                        # 使用自定义封面或默认封面
+                        cover_image = custom_cover_path or (library.image_list[0] if library.image_list else None)
+                        
+                        # 获取媒体库统计信息
+                        library_stats = self._get_library_stats(service, library)
+                        
+                        libraries_data.append({
+                            "server": server_name,
+                            "name": library.name,
+                            "type": library.type,
+                            "image": cover_image,
+                            "link": library.link,
+                            "has_custom_cover": custom_cover_path is not None,
+                            "stats": library_stats,
+                            "cover_style": self._cover_style
+                        })
+            
+            # 构建仪表盘组件
+            dashboard_elements = []
+            
+            # 添加标题和统计信息
+            total_libraries = len(libraries_data)
+            custom_cover_count = sum(1 for lib in libraries_data if lib["has_custom_cover"])
+            
+            dashboard_elements.append({
+                "component": "VRow",
+                "content": [{
+                    "component": "VCol",
+                    "props": {"cols": 12},
+                    "content": [{
+                        "component": "div",
+                        "props": {"class": "d-flex align-center justify-space-between mb-3"},
+                        "content": [{
+                            "component": "div",
+                            "props": {"class": "text-h6"},
+                            "text": "我的媒体库"
+                        }, {
+                            "component": "div",
+                            "props": {"class": "text-caption text-grey"},
+                            "text": f"共 {total_libraries} 个媒体库，{custom_cover_count} 个已生成自定义封面"
+                        }]
+                    }]
+                }]
+            })
+            
+            if not libraries_data:
+                dashboard_elements.append({
+                    "component": "VCard",
+                    "props": {
+                        "variant": "tonal",
+                        "class": "mb-3"
+                    },
+                    "content": [{
+                        "component": "VCardText",
+                        "text": "未找到可用的媒体库"
+                    }]
+                })
+            else:
+                # 按行显示媒体库，每行最多4个
+                rows = []
+                for i in range(0, len(libraries_data), 4):
+                    row_libraries = libraries_data[i:i+4]
+                    row_content = []
+                    
+                    for library in row_libraries:
+                        col_props = {"cols": 12, "sm": 6, "md": 3, "class": "pa-2"}
+                        
+                        card_content = []
+                        
+                        # 媒体库封面
+                        if library["image"]:
+                            card_content.append({
+                                "component": "VImg",
+                                "props": {
+                                    "src": library["image"],
+                                    "height": "200",
+                                    "cover": True,
+                                    "class": "rounded-t"
+                                }
+                            })
+                        
+                        # 媒体库信息
+                        card_text_content = [{
+                            "component": "div",
+                            "props": {"class": "text-subtitle-1 font-weight-bold"},
+                            "text": library["name"]
+                        }, {
+                            "component": "div",
+                            "props": {"class": "text-caption text-grey"},
+                            "text": f"{library['server']} • {library['type']}"
+                        }]
+                        
+                        # 显示媒体库统计信息
+                        if library["stats"]:
+                            stats_text = []
+                            if library["stats"].get("movie_count", 0) > 0:
+                                stats_text.append(f"电影: {library['stats']['movie_count']}")
+                            if library["stats"].get("tv_count", 0) > 0:
+                                stats_text.append(f"剧集: {library['stats']['tv_count']}")
+                            if library["stats"].get("episode_count", 0) > 0:
+                                stats_text.append(f"集数: {library['stats']['episode_count']}")
+                            
+                            if stats_text:
+                                card_text_content.append({
+                                    "component": "div",
+                                    "props": {"class": "text-caption text-primary mt-1"},
+                                    "text": " | ".join(stats_text)
+                                })
+                        
+                        # 状态标识
+                        chip_row = []
+                        if library["has_custom_cover"]:
+                            chip_row.append({
+                                "component": "VChip",
+                                "props": {
+                                    "size": "small",
+                                    "color": "success",
+                                    "class": "mr-1"
+                                },
+                                "text": "自定义封面"
+                            })
+                        
+                        if library["cover_style"]:
+                            style_name = {
+                                "single_1": "单图1",
+                                "single_2": "单图2", 
+                                "multi_1": "多图1",
+                                "multi_2": "多图2",
+                                "multi_3": "多图3"
+                            }.get(library["cover_style"], library["cover_style"])
+                            chip_row.append({
+                                "component": "VChip",
+                                "props": {
+                                    "size": "small",
+                                    "color": "info",
+                                    "variant": "outlined"
+                                },
+                                "text": style_name
+                            })
+                        
+                        if chip_row:
+                            card_text_content.append({
+                                "component": "div",
+                                "props": {"class": "mt-2"},
+                                "content": chip_row
+                            })
+                        
+                        card_content.append({
+                            "component": "VCardText",
+                            "content": card_text_content
+                        })
+                        
+                        # 如果有链接，添加点击事件
+                        card_props = {
+                            "class": "mb-3 cursor-pointer",
+                            "variant": "outlined",
+                            "hover": True
+                        }
+                        
+                        if library["link"]:
+                            card_props["@click"] = f"window.open('{library['link']}', '_blank')"
+                        
+                        row_content.append({
+                            "component": "VCol",
+                            "props": col_props,
+                            "content": [{
+                                "component": "VCard",
+                                "props": card_props,
+                                "content": card_content
+                            }]
+                        })
+                    
+                    rows.append({
+                        "component": "VRow",
+                        "content": row_content
+                    })
+                
+                dashboard_elements.extend(rows)
+            
+            return dashboard_elements
+            
+        except Exception as e:
+            logger.error(f"获取仪表盘数据失败: {e}")
+            return [{
+                "component": "VCard",
+                "props": {
+                    "variant": "tonal",
+                    "color": "error",
+                    "class": "mb-3"
+                },
+                "content": [{
+                    "component": "VCardText",
+                    "text": f"获取媒体库信息失败: {str(e)}"
+                }]
+            }]
+    
+    def _get_generation_status_dashboard(self) -> List[dict]:
+        """
+        获取封面生成状态仪表盘
+        """
+        if not self._enabled:
+            return [{
+                "component": "VCard",
+                "props": {
+                    "variant": "tonal",
+                    "class": "mb-3"
+                },
+                "content": [{
+                    "component": "VCardText",
+                    "text": "Plex媒体封面插件未启用"
+                }]
+            }]
+        
+        try:
+            status_elements = []
+            
+            # 添加标题
+            status_elements.append({
+                "component": "VRow",
+                "content": [{
+                    "component": "VCol",
+                    "props": {"cols": 12},
+                    "content": [{
+                        "component": "div",
+                        "props": {"class": "text-h6 mb-3"},
+                        "text": "封面生成状态"
+                    }]
+                }]
+            })
+            
+            # 配置信息卡片
+            config_info = [
+                {"label": "封面样式", "value": self._cover_style or "未设置"},
+                {"label": "排序方式", "value": self._sort_by or "Random"},
+                {"label": "定时任务", "value": self._cron or "未设置"},
+                {"label": "输出目录", "value": self._covers_output or "默认数据目录"},
+                {"label": "自定义图片目录", "value": self._covers_input or "未设置"}
+            ]
+            
+            config_rows = []
+            for info in config_info:
+                config_rows.append({
+                    "component": "VRow",
+                    "props": {"class": "mb-1"},
+                    "content": [{
+                        "component": "VCol",
+                        "props": {"cols": 4},
+                        "content": [{
+                            "component": "div",
+                            "props": {"class": "text-body-2 font-weight-bold"},
+                            "text": info["label"]
+                        }]
+                    }, {
+                        "component": "VCol",
+                        "props": {"cols": 8},
+                        "content": [{
+                            "component": "div",
+                            "props": {"class": "text-body-2"},
+                            "text": info["value"]
+                        }]
+                    }]
+                })
+            
+            status_elements.append({
+                "component": "VCard",
+                "props": {
+                    "variant": "outlined",
+                    "class": "mb-3"
+                },
+                "content": [{
+                    "component": "VCardTitle",
+                    "text": "当前配置"
+                }, {
+                    "component": "VCardText",
+                    "content": config_rows
+                }]
+            })
+            
+            # 服务器状态
+            if self._servers:
+                server_status = []
+                for server_name, service in self._servers.items():
+                    status_color = "success" if not service.instance.is_inactive() else "error"
+                    status_text = "在线" if not service.instance.is_inactive() else "离线"
+                    
+                    server_status.append({
+                        "component": "VRow",
+                        "props": {"class": "mb-1"},
+                        "content": [{
+                            "component": "VCol",
+                            "props": {"cols": 6},
+                            "content": [{
+                                "component": "div",
+                                "props": {"class": "text-body-2"},
+                                "text": server_name
+                            }]
+                        }, {
+                            "component": "VCol",
+                            "props": {"cols": 6},
+                            "content": [{
+                                "component": "VChip",
+                                "props": {
+                                    "size": "small",
+                                    "color": status_color
+                                },
+                                "text": status_text
+                            }]
+                        }]
+                    })
+                
+                status_elements.append({
+                    "component": "VCard",
+                    "props": {
+                        "variant": "outlined",
+                        "class": "mb-3"
+                    },
+                    "content": [{
+                        "component": "VCardTitle",
+                        "text": "媒体服务器状态"
+                    }, {
+                        "component": "VCardText",
+                        "content": server_status
+                    }]
+                })
+            
+            return status_elements
+            
+        except Exception as e:
+            logger.error(f"获取生成状态失败: {e}")
+            return [{
+                "component": "VCard",
+                "props": {
+                    "variant": "tonal",
+                    "color": "error",
+                    "class": "mb-3"
+                },
+                "content": [{
+                    "component": "VCardText",
+                    "text": f"获取状态信息失败: {str(e)}"
+                }]
+            }]
+    
+    def _get_library_stats(self, service, library):
+        """
+        获取媒体库统计信息
+        """
+        try:
+            stats = {"movie_count": 0, "tv_count": 0, "episode_count": 0}
+            
+            if service.type == 'plex':
+                library_id = library.get("key")
+                if library_id:
+                    # 获取Plex媒体库统计
+                    url = f'[HOST]library/sections/{library_id}/all?X-Plex-Token=[APIKEY]'
+                    res = service.instance.get_data(url=url)
+                    if res:
+                        data = res.json()
+                        metadata = data.get("MediaContainer", {}).get("Metadata", [])
+                        
+                        for item in metadata:
+                            item_type = item.get("type")
+                            if item_type == "movie":
+                                stats["movie_count"] += 1
+                            elif item_type == "show":
+                                stats["tv_count"] += 1
+                                # 获取剧集数
+                                show_key = item.get("key")
+                                if show_key:
+                                    episode_url = f'[HOST]{show_key}/allLeaves?X-Plex-Token=[APIKEY]'
+                                    episode_res = service.instance.get_data(url=episode_url)
+                                    if episode_res:
+                                        episode_data = episode_res.json()
+                                        episodes = episode_data.get("MediaContainer", {}).get("Metadata", [])
+                                        stats["episode_count"] += len(episodes)
+            
+            return stats
+        except Exception as e:
+            logger.error(f"获取媒体库统计信息失败: {e}")
+            return None
 
     def stop_service(self):
         """

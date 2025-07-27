@@ -135,5 +135,18 @@
     "history": {
       "v1.0.0": "PlexWarp 1.0.0 发布"
     }
+  },
+  "PlexCoverModifier": {
+    "name": "Plex封面修改器",
+    "description": "修改Plex媒体库封面，支持自定义封面图片替换。",
+    "labels": "Plex, 封面, 媒体库",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "初始版本，支持自定义Plex媒体库封面替换"
+    }
   }
 }
