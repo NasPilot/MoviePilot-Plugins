@@ -76,7 +76,7 @@ class PlexWarp(_PluginBase):
         # 配置文件名
         self.__config_filename = "config.yaml"
         # 二进制文件版本
-        self.__plexwarp_version = "0.1.13"
+        self.__plexwarp_version = "0.1.0"
         self.__plexwarp_version_path = (
             settings.PLUGIN_DATA_PATH / class_name / "version.txt"
         )
