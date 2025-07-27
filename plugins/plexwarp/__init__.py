@@ -413,22 +413,26 @@ class PlexWarp(_PluginBase):
                                 "content": [
                                     {
                                         "component": "div",
-                                        "text": "注意：",
+                                        "text": "注意事项：",
                                     },
                                     {
                                         "component": "div",
-                                        "text": "如果 MoviePilot 容器为 bridge 模式需要手动映射配置的端口",
+                                        "text": "• 如果 MoviePilot 容器为 bridge 模式，需要手动映射配置的端口",
                                     },
                                     {
                                         "component": "div",
-                                        "text": "更多配置可以前往 MoviePilot 配置目录找到此插件的配置目录进行详细配置文件配置",
+                                        "text": "• 更多详细配置可以前往 MoviePilot 配置目录找到此插件的配置目录进行配置文件配置",
+                                    },
+                                    {
+                                        "component": "div",
+                                        "text": "• PlexWarp 专为 Plex 媒体服务器优化，提供更好的播放体验",
                                     },
                                 ],
                             },
                             {
                                 "component": "VAlert",
                                 "props": {
-                                    "type": "info",
+                                    "type": "success",
                                     "variant": "tonal",
                                     "density": "compact",
                                     "class": "mt-2",
@@ -436,18 +440,22 @@ class PlexWarp(_PluginBase):
                                 "content": [
                                     {
                                         "component": "div",
-                                        "text": "目前支持 115网盘STRM助手，123云盘STRM助手，CloudMediaSync，OneStrm",
+                                        "text": "支持的 STRM 文件类型：",
                                     },
                                     {
                                         "component": "div",
-                                        "text": "Symedia，q115-strm 等软件生成的STRM文件",
+                                        "text": "• 115网盘STRM助手、123云盘STRM助手、CloudMediaSync",
+                                    },
+                                    {
+                                        "component": "div",
+                                        "text": "• OneStrm、Symedia、q115-strm 等软件生成的 STRM 文件",
                                     },
                                 ],
                             },
                             {
                                 "component": "VAlert",
                                 "props": {
-                                    "type": "info",
+                                    "type": "warning",
                                     "variant": "tonal",
                                     "density": "compact",
                                     "class": "mt-2",
@@ -455,7 +463,11 @@ class PlexWarp(_PluginBase):
                                 "content": [
                                     {
                                         "component": "div",
-                                        "text": "感谢项目作者：https://github.com/NasPilot/MediaWarp",
+                                        "text": "项目致谢：基于 PlexWarp 项目开发",
+                                    },
+                                    {
+                                        "component": "div",
+                                        "text": "项目地址：https://github.com/NasPilot/PlexWarp",
                                     },
                                 ],
                             },
