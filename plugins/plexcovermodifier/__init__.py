@@ -264,7 +264,7 @@ class PlexCoverModifier(_PluginBase):
                             }
                         ]
                     }
-                ]}
+                ]
             }
         ], {
             "enabled": self._enabled,
