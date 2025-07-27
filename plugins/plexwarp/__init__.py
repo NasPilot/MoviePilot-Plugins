@@ -653,7 +653,7 @@ class PlexWarp(_PluginBase):
         """
         获取下载链接
         """
-        base_url = "https://github.com/NasPilot/MediaWarp/releases/download/v{version}/MediaWarp_{version}_{os}_{arch}.tar.gz"
+        base_url = "https://github.com/NasPilot/PlexWarp/releases/download/v{version}/PlexWarp_{version}_{os}_{arch}.tar.gz"
 
         machine = platform.machine().lower()
         if machine == "arm64" or machine == "aarch64":
@@ -675,7 +675,7 @@ class PlexWarp(_PluginBase):
         """
         url = self.__get_download_url()
         temp_dir = tempfile.mkdtemp()
-        temp_file = os.path.join(temp_dir, "MediaWarp.tar.gz")
+        temp_file = os.path.join(temp_dir, "PlexWarp.tar.gz")
 
         try:
             Path(self.__config_path).mkdir(parents=True, exist_ok=True)
@@ -690,12 +690,12 @@ class PlexWarp(_PluginBase):
 
             logger.info("正在解压文件...")
             with tarfile.open(temp_file, "r:gz") as tar:
-                mediawarp_member = [
-                    m for m in tar.getmembers() if m.name.endswith("MediaWarp")
+                plexwarp_member = [
+                    m for m in tar.getmembers() if m.name.endswith("PlexWarp")
                 ]
-                if mediawarp_member:
-                    tar.extract(member=mediawarp_member[0], path=temp_dir)
-                    extracted_path = Path(temp_dir) / mediawarp_member[0].name
+                if plexwarp_member:
+                    tar.extract(member=plexwarp_member[0], path=temp_dir)
+                    extracted_path = Path(temp_dir) / plexwarp_member[0].name
                     extracted_path.chmod(0o755)
                     shutil.copy2(extracted_path, Path(self.__plexwarp_path))
 
