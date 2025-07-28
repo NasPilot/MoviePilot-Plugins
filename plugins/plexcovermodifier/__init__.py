@@ -129,8 +129,12 @@ class PlexCoverModifier(_PluginBase):
         修改后的mediaserver_librarys方法
         """
         # 调用原始方法获取媒体库列表
-        libraries = self._original_method(server, hidden, **kwargs) if self._original_method else []
+        libraries = self._original_method(server, hidden, **kwargs) if self._original_method else None
         
+        # 如果原始方法返回None，直接返回None
+        if libraries is None:
+            return None
+            
         # 修改封面
         for library in libraries:
             if library.name in self._library_covers:
