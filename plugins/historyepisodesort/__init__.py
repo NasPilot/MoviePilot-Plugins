@@ -28,7 +28,7 @@ class HistoryEpisodeSort(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png"
     # 插件版本
-    plugin_version = "1.0.3"
+    plugin_version = "1.0.4"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -91,6 +91,14 @@ class HistoryEpisodeSort(_PluginBase):
 
     def get_api(self) -> List[Dict[str, Any]]:
         return [
+            {
+                "path": "/page",
+                "endpoint": self.get_page_api,
+                "methods": ["GET"],
+                "summary": "获取插件页面",
+                "description": "获取插件的HTML页面",
+                "auth": "bear",
+            },
             {
                 "path": "/tv_histories",
                 "endpoint": self.get_tv_histories_api,
@@ -220,115 +228,18 @@ class HistoryEpisodeSort(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
+        """
+        插件的额外页面，返回页面配置
+        """
         return [
             {
-                "component": "div",
-                "text": "历史记录剧集排序管理",
+                "component": "iframe",
                 "props": {
-                    "class": "text-h4 mb-4"
+                    "src": "/plugin/HistoryEpisodeSort/page",
+                    "width": "100%",
+                    "height": "800px",
+                    "frameborder": "0"
                 }
-            },
-            {
-                "component": "VCard",
-                "props": {
-                    "class": "mb-4"
-                },
-                "content": [
-                    {
-                        "component": "VCardTitle",
-                        "text": "快速操作"
-                    },
-                    {
-                        "component": "VCardText",
-                        "content": [
-                            {
-                                "component": "VBtn",
-                                "props": {
-                                    "color": "primary",
-                                    "class": "mr-2",
-                                    "@click": "runOnce"
-                                },
-                                "text": "立即运行一次全部排序"
-                            },
-                            {
-                                "component": "VBtn",
-                                "props": {
-                                    "color": "success",
-                                    "@click": "refreshData"
-                                },
-                                "text": "刷新数据"
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                "component": "VCard",
-                "content": [
-                    {
-                        "component": "VCardTitle",
-                        "text": "电视剧历史记录管理"
-                    },
-                    {
-                        "component": "VCardText",
-                        "content": [
-                            {
-                                "component": "VDataTable",
-                                "props": {
-                                    "headers": [
-                                        {"title": "选择", "key": "select", "sortable": False},
-                                        {"title": "电视剧名称", "key": "title"},
-                                        {"title": "剧集数量", "key": "episode_count"},
-                                        {"title": "最早时间", "key": "earliest_date"},
-                                        {"title": "最晚时间", "key": "latest_date"},
-                                        {"title": "操作", "key": "actions", "sortable": False}
-                                    ],
-                                    "items": "tvHistories",
-                                    "item-value": "tmdb_id",
-                                    "show-select": True,
-                                    "v-model": "selectedItems",
-                                    "loading": "loading"
-                                },
-                                "content": [
-                                    {
-                                        "component": "template",
-                                        "props": {
-                                            "v-slot:item.actions": "{ item }"
-                                        },
-                                        "content": [
-                                            {
-                                                "component": "VBtn",
-                                                "props": {
-                                                    "size": "small",
-                                                    "color": "primary",
-                                                    "@click": "sortSingle(item.tmdb_id)"
-                                                },
-                                                "text": "排序"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                "component": "div",
-                                "props": {
-                                    "class": "mt-4"
-                                },
-                                "content": [
-                                    {
-                                        "component": "VBtn",
-                                        "props": {
-                                            "color": "primary",
-                                            "@click": "sortSelected",
-                                            ":disabled": "selectedItems.length === 0"
-                                        },
-                                        "text": "排序选中项"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
             }
         ]
 
@@ -545,6 +456,27 @@ class HistoryEpisodeSort(_PluginBase):
         self.systemmessage.put(message, title="历史记录剧集排序")
 
     # API接口实现
+    def get_page_api(self):
+        """
+        获取插件页面API
+        """
+        try:
+            import os
+            from fastapi.responses import HTMLResponse
+            
+            # 获取HTML文件路径
+            html_file = os.path.join(os.path.dirname(__file__), "dist", "index.html")
+            
+            if os.path.exists(html_file):
+                with open(html_file, 'r', encoding='utf-8') as f:
+                    html_content = f.read()
+                return HTMLResponse(content=html_content, media_type="text/html")
+            else:
+                return HTMLResponse(content="<h1>页面文件不存在</h1>", media_type="text/html")
+        except Exception as e:
+            logger.error(f"获取页面失败: {str(e)}")
+            return HTMLResponse(content=f"<h1>页面加载失败: {str(e)}</h1>", media_type="text/html")
+    
     def get_tv_histories_api(self):
         """
         获取电视剧历史记录API
