@@ -22,7 +22,7 @@ class HistoryImportExport(_PluginBase):
     # 插件描述
     plugin_desc = "支持按电视剧分别导出历史记录，并可按剧集顺序重新排列时间后导入。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historyimportexport.svg"
+    plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historyimport.png"
     # 插件版本
     plugin_version = "1.0.0"
     # 插件作者
@@ -55,6 +55,13 @@ class HistoryImportExport(_PluginBase):
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
         pass
+
+    @staticmethod
+    def get_render_mode() -> Tuple[str, str]:
+        """
+        获取渲染模式
+        """
+        return "federation", "/assets/remoteEntry.js"
 
     def get_api(self) -> List[Dict[str, Any]]:
         return [

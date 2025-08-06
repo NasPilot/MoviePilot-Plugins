@@ -89,6 +89,13 @@ class HistoryEpisodeSort(_PluginBase):
         """
         pass
 
+    @staticmethod
+    def get_render_mode() -> Tuple[str, str]:
+        """
+        获取渲染模式
+        """
+        return "federation", "/assets/remoteEntry.js"
+
     def get_api(self) -> List[Dict[str, Any]]:
         return [
             {

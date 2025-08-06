@@ -159,7 +159,7 @@
     "description": "支持按电视剧分别导出历史记录，并可按剧集顺序重新排列时间后导入。",
     "labels": "历史记录, 导入导出, 备份",
     "version": "1.0.0",
-    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historyimportexport.svg",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historyimport.png",
     "author": "NasPilot",
     "level": 1,
     "v2": true,
