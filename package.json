@@ -141,7 +141,7 @@
     "name": "历史记录排序",
     "description": "同一部电视剧的不同剧集按正确的时间顺序重新排序。",
     "labels": "历史记录, 整理",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png",
     "author": "NasPilot",
     "level": 1,
