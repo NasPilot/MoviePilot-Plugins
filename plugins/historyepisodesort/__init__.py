@@ -24,11 +24,11 @@ class HistoryEpisodeSort(_PluginBase):
     # 插件名称
     plugin_name = "历史记录排序"
     # 插件描述
-    plugin_desc = "对同一部电视剧的不同剧集按正确的时间顺序重新排序，将排序错误的剧集整理时间插入到正确位置。"
+    plugin_desc = "对同一部电视剧的不同剧集按正确的时间顺序重新排序。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png"
     # 插件版本
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
