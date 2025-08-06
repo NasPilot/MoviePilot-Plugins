@@ -28,7 +28,7 @@ class HistoryEpisodeSort(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png"
     # 插件版本
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -518,7 +518,6 @@ class HistoryEpisodeSort(_PluginBase):
         db.query(TransferHistory).filter(
             TransferHistory.id == history_id
         ).update({'date': new_date})
-        db.commit()
 
     def __calculate_time_interval(self, episode_count: int) -> float:
         """
