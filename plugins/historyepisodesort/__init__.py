@@ -356,9 +356,8 @@ class HistoryEpisodeSort(_PluginBase):
         
         return groups
 
-    @staticmethod
     @db_query
-    def __get_tv_histories(db: Session) -> List[TransferHistory]:
+    def __get_tv_histories(self, db: Session) -> List[TransferHistory]:
         """获取所有电视剧历史记录"""
         return db.query(TransferHistory).filter(
             and_(
@@ -370,9 +369,8 @@ class HistoryEpisodeSort(_PluginBase):
             )
         ).order_by(TransferHistory.date.asc()).all()
 
-    @staticmethod
     @db_update
-    def __update_episode_date(db: Session, history_id: int, new_date: str):
+    def __update_episode_date(self, db: Session, history_id: int, new_date: str):
         """更新剧集的整理时间"""
         db.query(TransferHistory).filter(
             TransferHistory.id == history_id
