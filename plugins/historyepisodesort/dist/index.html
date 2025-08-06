@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>历史记录剧集排序管理</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.4.0/dist/vuetify.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.4.0/dist/vuetify.min.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+    }
+    .v-application {
+      background: transparent !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <!-- 页面标题 -->
+        <div class="text-h4 mb-4">历史记录剧集排序管理</div>
+        
+        <!-- 快速操作卡片 -->
+        <v-card class="mb-4">
+          <v-card-title>快速操作</v-card-title>
+          <v-card-text>
+            <v-btn color="primary" class="mr-2" @click="runOnce" :loading="runOnceLoading">
+              立即运行一次全部排序
+            </v-btn>
+            <v-btn color="success" @click="refreshData" :loading="loading">
+              刷新数据
+            </v-btn>
+          </v-card-text>
+        </v-card>
+        
+        <!-- 电视剧历史记录管理卡片 -->
+        <v-card>
+          <v-card-title>电视剧历史记录管理</v-card-title>
+          <v-card-text>
+            <v-data-table
+              v-model="selectedItems"
+              :headers="headers"
+              :items="tvHistories"
+              item-value="tmdb_id"
+              show-select
+              :loading="loading"
+              class="elevation-1"
+            >
+              <template v-slot:item.actions="{ item }">
+                <v-btn
+                  size="small"
+                  color="primary"
+                  @click="sortSingle(item.tmdb_id)"
+                  :loading="sortingItems.includes(item.tmdb_id)"
+                >
+                  排序
+                </v-btn>
+              </template>
+            </v-data-table>
+            
+            <div class="mt-4">
+              <v-btn
+                color="primary"
+                @click="sortSelected"
+                :disabled="selectedItems.length === 0"
+                :loading="sortSelectedLoading"
+              >
+                排序选中项 ({{ selectedItems.length }})
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
+        
+        <!-- 消息提示 -->
+        <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+          {{ snackbar.text }}
+        </v-snackbar>
+      </v-container>
+    </v-app>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    const { createVuetify } = Vuetify;
+
+    const vuetify = createVuetify({
+      theme: {
+        defaultTheme: 'dark'
+      }
+    });
+
+    createApp({
+      data() {
+        return {
+          loading: false,
+          runOnceLoading: false,
+          sortSelectedLoading: false,
+          sortingItems: [],
+          selectedItems: [],
+          tvHistories: [],
+          snackbar: {
+            show: false,
+            text: '',
+            color: 'success'
+          },
+          headers: [
+            { title: '电视剧名称', key: 'title', sortable: true },
+            { title: '剧集数量', key: 'episode_count', sortable: true },
+            { title: '最早时间', key: 'earliest_date', sortable: true },
+            { title: '最晚时间', key: 'latest_date', sortable: true },
+            { title: '操作', key: 'actions', sortable: false }
+          ]
+        }
+      },
+      mounted() {
+        this.refreshData();
+      },
+      methods: {
+        async refreshData() {
+          this.loading = true;
+          try {
+            const response = await fetch('/api/v1/plugin/HistoryEpisodeSort/tv_histories');
+            const result = await response.json();
+            if (result.success) {
+              this.tvHistories = result.data;
+              this.showMessage('数据刷新成功', 'success');
+            } else {
+              this.showMessage('数据刷新失败: ' + result.message, 'error');
+            }
+          } catch (error) {
+            this.showMessage('网络错误: ' + error.message, 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+        
+        async runOnce() {
+          this.runOnceLoading = true;
+          try {
+            const response = await fetch('/api/v1/plugin/HistoryEpisodeSort/run_once', {
+              method: 'POST'
+            });
+            const result = await response.json();
+            if (result.success) {
+              this.showMessage(result.message, 'success');
+              // 延迟刷新数据
+              setTimeout(() => {
+                this.refreshData();
+              }, 2000);
+            } else {
+              this.showMessage('执行失败: ' + result.message, 'error');
+            }
+          } catch (error) {
+            this.showMessage('网络错误: ' + error.message, 'error');
+          } finally {
+            this.runOnceLoading = false;
+          }
+        },
+        
+        async sortSelected() {
+          if (this.selectedItems.length === 0) {
+            this.showMessage('请先选择要排序的电视剧', 'warning');
+            return;
+          }
+          
+          this.sortSelectedLoading = true;
+          try {
+            const response = await fetch('/api/v1/plugin/HistoryEpisodeSort/sort_selected', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ tmdb_ids: this.selectedItems })
+            });
+            const result = await response.json();
+            if (result.success) {
+              this.showMessage(result.message, 'success');
+              this.selectedItems = [];
+              // 延迟刷新数据
+              setTimeout(() => {
+                this.refreshData();
+              }, 1000);
+            } else {
+              this.showMessage('排序失败: ' + result.message, 'error');
+            }
+          } catch (error) {
+            this.showMessage('网络错误: ' + error.message, 'error');
+          } finally {
+            this.sortSelectedLoading = false;
+          }
+        },
+        
+        async sortSingle(tmdbId) {
+          this.sortingItems.push(tmdbId);
+          try {
+            const response = await fetch('/api/v1/plugin/HistoryEpisodeSort/sort_selected', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ tmdb_ids: [tmdbId] })
+            });
+            const result = await response.json();
+            if (result.success) {
+              this.showMessage(result.message, 'success');
+              // 延迟刷新数据
+              setTimeout(() => {
+                this.refreshData();
+              }, 1000);
+            } else {
+              this.showMessage('排序失败: ' + result.message, 'error');
+            }
+          } catch (error) {
+            this.showMessage('网络错误: ' + error.message, 'error');
+          } finally {
+            this.sortingItems = this.sortingItems.filter(id => id !== tmdbId);
+          }
+        },
+        
+        showMessage(text, color = 'success') {
+          this.snackbar = {
+            show: true,
+            text,
+            color
+          };
+        }
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+</html>

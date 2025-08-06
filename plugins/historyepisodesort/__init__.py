@@ -28,7 +28,7 @@ class HistoryEpisodeSort(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png"
     # 插件版本
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -90,7 +90,40 @@ class HistoryEpisodeSort(_PluginBase):
         pass
 
     def get_api(self) -> List[Dict[str, Any]]:
-        pass
+        return [
+            {
+                "path": "/tv_histories",
+                "endpoint": self.get_tv_histories_api,
+                "methods": ["GET"],
+                "summary": "获取电视剧历史记录",
+                "description": "获取所有电视剧的历史记录列表",
+                "auth": "bear",
+            },
+            {
+                "path": "/sort_selected",
+                "endpoint": self.sort_selected_api,
+                "methods": ["POST"],
+                "summary": "排序选中的电视剧",
+                "description": "对选中的电视剧进行剧集排序",
+                "auth": "bear",
+            },
+            {
+                "path": "/update_time",
+                "endpoint": self.update_time_api,
+                "methods": ["POST"],
+                "summary": "更新剧集时间",
+                "description": "手动更新指定剧集的整理时间",
+                "auth": "bear",
+            },
+            {
+                "path": "/run_once",
+                "endpoint": self.run_once_api,
+                "methods": ["POST"],
+                "summary": "立即运行一次",
+                "description": "立即执行一次全部排序",
+                "auth": "bear",
+            }
+        ]
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """
@@ -187,7 +220,117 @@ class HistoryEpisodeSort(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        pass
+        return [
+            {
+                "component": "div",
+                "text": "历史记录剧集排序管理",
+                "props": {
+                    "class": "text-h4 mb-4"
+                }
+            },
+            {
+                "component": "VCard",
+                "props": {
+                    "class": "mb-4"
+                },
+                "content": [
+                    {
+                        "component": "VCardTitle",
+                        "text": "快速操作"
+                    },
+                    {
+                        "component": "VCardText",
+                        "content": [
+                            {
+                                "component": "VBtn",
+                                "props": {
+                                    "color": "primary",
+                                    "class": "mr-2",
+                                    "@click": "runOnce"
+                                },
+                                "text": "立即运行一次全部排序"
+                            },
+                            {
+                                "component": "VBtn",
+                                "props": {
+                                    "color": "success",
+                                    "@click": "refreshData"
+                                },
+                                "text": "刷新数据"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "component": "VCard",
+                "content": [
+                    {
+                        "component": "VCardTitle",
+                        "text": "电视剧历史记录管理"
+                    },
+                    {
+                        "component": "VCardText",
+                        "content": [
+                            {
+                                "component": "VDataTable",
+                                "props": {
+                                    "headers": [
+                                        {"title": "选择", "key": "select", "sortable": False},
+                                        {"title": "电视剧名称", "key": "title"},
+                                        {"title": "剧集数量", "key": "episode_count"},
+                                        {"title": "最早时间", "key": "earliest_date"},
+                                        {"title": "最晚时间", "key": "latest_date"},
+                                        {"title": "操作", "key": "actions", "sortable": False}
+                                    ],
+                                    "items": "tvHistories",
+                                    "item-value": "tmdb_id",
+                                    "show-select": True,
+                                    "v-model": "selectedItems",
+                                    "loading": "loading"
+                                },
+                                "content": [
+                                    {
+                                        "component": "template",
+                                        "props": {
+                                            "v-slot:item.actions": "{ item }"
+                                        },
+                                        "content": [
+                                            {
+                                                "component": "VBtn",
+                                                "props": {
+                                                    "size": "small",
+                                                    "color": "primary",
+                                                    "@click": "sortSingle(item.tmdb_id)"
+                                                },
+                                                "text": "排序"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "component": "div",
+                                "props": {
+                                    "class": "mt-4"
+                                },
+                                "content": [
+                                    {
+                                        "component": "VBtn",
+                                        "props": {
+                                            "color": "primary",
+                                            "@click": "sortSelected",
+                                            ":disabled": "selectedItems.length === 0"
+                                        },
+                                        "text": "排序选中项"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
@@ -401,3 +544,149 @@ class HistoryEpisodeSort(_PluginBase):
         """
         logger.info(message)
         self.systemmessage.put(message, title="历史记录剧集排序")
+
+    # API接口实现
+    def get_tv_histories_api(self):
+        """
+        获取电视剧历史记录API
+        """
+        try:
+            tv_histories = self.__get_tv_histories()
+            if not tv_histories:
+                return {"success": True, "data": []}
+            
+            # 按tmdb_id分组统计
+            tv_groups = {}
+            for history in tv_histories:
+                tmdb_id = history.tmdbid
+                if tmdb_id not in tv_groups:
+                    tv_groups[tmdb_id] = {
+                        "tmdb_id": tmdb_id,
+                        "title": history.title,
+                        "episodes": [],
+                        "episode_count": 0,
+                        "earliest_date": None,
+                        "latest_date": None
+                    }
+                
+                tv_groups[tmdb_id]["episodes"].append(history)
+                tv_groups[tmdb_id]["episode_count"] += 1
+                
+                # 更新最早和最晚时间
+                date = history.date
+                if tv_groups[tmdb_id]["earliest_date"] is None or date < tv_groups[tmdb_id]["earliest_date"]:
+                    tv_groups[tmdb_id]["earliest_date"] = date
+                if tv_groups[tmdb_id]["latest_date"] is None or date > tv_groups[tmdb_id]["latest_date"]:
+                    tv_groups[tmdb_id]["latest_date"] = date
+            
+            # 转换为列表格式
+            result = []
+            for group in tv_groups.values():
+                result.append({
+                    "tmdb_id": group["tmdb_id"],
+                    "title": group["title"],
+                    "episode_count": group["episode_count"],
+                    "earliest_date": group["earliest_date"].strftime("%Y-%m-%d %H:%M:%S") if group["earliest_date"] else "",
+                    "latest_date": group["latest_date"].strftime("%Y-%m-%d %H:%M:%S") if group["latest_date"] else ""
+                })
+            
+            return {"success": True, "data": result}
+        except Exception as e:
+            logger.error(f"获取电视剧历史记录失败: {e}")
+            return {"success": False, "message": str(e)}
+
+    def sort_selected_api(self, **kwargs):
+        """
+        排序选中的电视剧API
+        """
+        try:
+            tmdb_ids = kwargs.get('tmdb_ids', [])
+            if not tmdb_ids:
+                return {"success": False, "message": "未选择任何电视剧"}
+            
+            tv_histories = self.__get_tv_histories()
+            if not tv_histories:
+                return {"success": False, "message": "没有找到电视剧历史记录"}
+            
+            # 筛选选中的电视剧
+            selected_histories = [h for h in tv_histories if h.tmdbid in tmdb_ids]
+            if not selected_histories:
+                return {"success": False, "message": "未找到选中的电视剧记录"}
+            
+            # 按tmdb_id和season分组
+            tv_groups = {}
+            for history in selected_histories:
+                group_key = (history.tmdbid, history.season)
+                if group_key not in tv_groups:
+                    tv_groups[group_key] = []
+                tv_groups[group_key].append(history)
+            
+            success_count = 0
+            total_count = len(tv_groups)
+            
+            # 处理每个分组
+            for group_key, episodes in tv_groups.items():
+                try:
+                    tmdbid, season = group_key
+                    logger.info(f"正在处理选中的分组: tmdbid={tmdbid}, season={season}, 共 {len(episodes)} 集")
+                    
+                    if self.__sort_episode_group(episodes):
+                        success_count += 1
+                except Exception as e:
+                    logger.error(f"处理分组 {group_key} 时出错: {e}")
+            
+            message = f"选中排序完成，成功处理 {success_count}/{total_count} 个分组"
+            self.__log_and_notify(message)
+            return {"success": True, "message": message}
+            
+        except Exception as e:
+            logger.error(f"排序选中电视剧失败: {e}")
+            return {"success": False, "message": str(e)}
+
+    def update_time_api(self, **kwargs):
+        """
+        更新剧集时间API
+        """
+        try:
+            history_id = kwargs.get('history_id')
+            new_date = kwargs.get('new_date')
+            
+            if not history_id or not new_date:
+                return {"success": False, "message": "缺少必要参数 history_id 或 new_date"}
+            
+            # 解析新时间
+            try:
+                new_datetime = datetime.strptime(new_date, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return {"success": False, "message": "时间格式错误，请使用 YYYY-MM-DD HH:MM:SS 格式"}
+            
+            # 更新数据库
+            if self.__update_episode_date(history_id, new_date):
+                message = f"成功更新剧集 {history_id} 的时间为 {new_date}"
+                logger.info(message)
+                return {"success": True, "message": message}
+            else:
+                return {"success": False, "message": "更新失败"}
+                
+        except Exception as e:
+            logger.error(f"更新剧集时间失败: {e}")
+            return {"success": False, "message": str(e)}
+
+    def run_once_api(self):
+        """
+        立即运行一次API
+        """
+        try:
+            # 在后台线程中执行排序
+            import threading
+            thread = threading.Thread(target=self.sort_episodes)
+            thread.daemon = True
+            thread.start()
+            
+            message = "已启动全部排序任务"
+            logger.info(message)
+            return {"success": True, "message": message}
+            
+        except Exception as e:
+            logger.error(f"启动排序任务失败: {e}")
+            return {"success": False, "message": str(e)}
