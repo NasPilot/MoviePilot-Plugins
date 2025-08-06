@@ -30,7 +30,7 @@ class MerlinHosts(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png"
     # 插件版本
-    plugin_version = "0.5"
+    plugin_version = "0.6"
     # 插件作者
     plugin_author = "NasPilot"
     # 插件作者主页
@@ -427,13 +427,13 @@ class MerlinHosts(_PluginBase):
         """
         获取本地hosts并更新到梅林路由器
         """
+        # 获取路由器当前hosts
+        remote_hosts = self.__fetch_remote_hosts()
+
         local_hosts = self.__get_local_hosts()
         if not local_hosts:
             self.__send_message(title="【梅林路由Hosts更新】", text="获取本地hosts失败，更新失败，请检查日志")
             return
-
-        # 获取路由器当前hosts
-        remote_hosts = self.__fetch_remote_hosts()
 
         # 合并hosts
         updated_hosts = self.__merge_hosts_with_local(local_hosts, remote_hosts)
@@ -466,57 +466,41 @@ class MerlinHosts(_PluginBase):
 
     def __merge_hosts_with_local(self, local_hosts: list, remote_hosts: list) -> list:
         """
-        合并本地hosts和路由器hosts，保留原有hosts条目，只更新或新增本地hosts中的域名
+        使用本地hosts内容覆盖远程hosts，并合并未冲突的条目，同时忽略IPv6和其他特定的本地定义
         """
         try:
             ignore = self._ignore.split("|") if self._ignore else []
             ignore.extend(["localhost"])
 
-            # 保留路由器hosts的所有内容，并建立域名映射
-            merged_hosts = []
-            hostname_to_line_index = {}  # 域名到行索引的映射
-            local_updates = {}  # 本地hosts中需要更新的域名映射
-
-            # 首先处理远程hosts，保留所有内容
+            # 创建远程hosts字典，适应空格或制表符分隔
+            remote_dict = {}
             for line in remote_hosts:
-                line_stripped = line.strip()
-                merged_hosts.append(line)  # 保留原始格式的行
-
-                # 如果是有效的hosts条目，记录域名到行索引的映射
-                if not line_stripped.startswith('#') and line_stripped and (" " in line_stripped or "\t" in line_stripped):
-                    parts = re.split(r'\s+', line_stripped)
-                    if len(parts) > 1:
+                line = line.strip()
+                if " " in line or "\t" in line:
+                    parts = re.split(r'\s+', line)
+                    if len(parts) > 1 and not line.startswith('#'):
                         ip, hostname = parts[0], parts[1]
                         if not self.__should_ignore_ip(ip) and hostname not in ignore and ip not in ignore:
-                            hostname_to_line_index[hostname] = len(merged_hosts) - 1
+                            remote_dict[hostname] = f"{ip}\t{hostname}"
 
-            # 处理本地hosts，收集需要更新或新增的条目
+            # 用本地hosts更新远程hosts
             for line in local_hosts:
                 line = line.lstrip("\ufeff").strip()
-                if line.startswith("#") or any(ign in line for ign in ignore) or not line:
+                if line.startswith("#") or any(ign in line for ign in ignore):
                     continue
                 parts = re.split(r'\s+', line)
                 if len(parts) < 2:
                     continue
                 ip, hostname = parts[0], parts[1]
                 if not self.__should_ignore_ip(ip) and hostname not in ignore and ip not in ignore:
-                    local_updates[hostname] = f"{ip}\t{hostname}"
+                    remote_dict[hostname] = f"{ip}\t{hostname}"
 
-            # 更新已存在的域名条目
-            for hostname, new_line in local_updates.items():
-                if hostname in hostname_to_line_index:
-                    # 更新现有条目
-                    line_index = hostname_to_line_index[hostname]
-                    merged_hosts[line_index] = new_line
-                    logger.info(f"更新域名 {hostname} 的hosts条目")
-                else:
-                    # 新增条目
-                    merged_hosts.append(new_line)
-                    logger.info(f"新增域名 {hostname} 的hosts条目")
+            # 组装最终的hosts列表
+            updated_hosts = [line.strip() for line in remote_hosts if line.strip().startswith('#')]
+            updated_hosts += [entry for entry in remote_dict.values()]
 
-            logger.info(f"合并后的hosts共{len(merged_hosts)}行，更新了{len(local_updates)}个域名")
-            return merged_hosts
-
+            logger.info(f"更新后的hosts为: {updated_hosts}")
+            return updated_hosts
         except Exception as e:
             logger.error(f"合并hosts失败: {e}")
             return []
@@ -736,10 +720,10 @@ class MerlinHosts(_PluginBase):
     @staticmethod
     def __get_local_hosts() -> list:
         """
-        获取本地hosts文件的内容，过滤掉moviepilot相关条目
+        获取本地hosts文件的内容
         """
         try:
-            logger.info("正在获取本地hosts")
+            logger.info("正在准备获取本地hosts")
             # 确定hosts文件的路径
             if SystemUtils.is_windows():
                 hosts_path = r"c:\windows\system32\drivers\etc\hosts"
@@ -747,26 +731,8 @@ class MerlinHosts(_PluginBase):
                 hosts_path = '/etc/hosts'
             with open(hosts_path, "r", encoding="utf-8") as file:
                 local_hosts = file.readlines()
-            # 去除换行符
-            local_hosts = [line.rstrip('\n\r') for line in local_hosts]
-            
-            # 过滤掉moviepilot相关的hosts条目
-            filtered_hosts = []
-            for line in local_hosts:
-                # 保留注释行和空行
-                if line.strip().startswith('#') or not line.strip():
-                    filtered_hosts.append(line)
-                    continue
-                
-                # 检查是否包含moviepilot域名
-                if 'moviepilot' in line.lower():
-                    logger.info(f"过滤掉moviepilot相关条目: {line.strip()}")
-                    continue
-                
-                filtered_hosts.append(line)
-            
-            logger.info(f"本地hosts文件读取成功: {len(local_hosts)}行，过滤后: {len(filtered_hosts)}行")
-            return filtered_hosts
+            logger.info(f"本地hosts文件读取成功: {local_hosts}")
+            return local_hosts
         except Exception as e:
             logger.error(f"读取本地hosts文件失败: {e}")
             return []
