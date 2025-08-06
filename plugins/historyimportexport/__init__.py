@@ -61,7 +61,7 @@ class HistoryImportExport(_PluginBase):
         """
         获取渲染模式
         """
-        return "federation", "/assets/remoteEntry.js"
+        return "none", ""
 
     def get_api(self) -> List[Dict[str, Any]]:
         return [
