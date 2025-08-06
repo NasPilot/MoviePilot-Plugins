@@ -747,6 +747,12 @@ class MerlinHosts(_PluginBase):
             # 忽略本地回环地址 (127.0.0.0/8) 和所有IPv6地址
             if ip_obj.is_loopback or ip_obj.version == 6:
                 return True
+            # 忽略Docker内部网络地址 (172.17.0.0/16)
+            if ip_obj.version == 4 and ipaddress.ip_network('172.17.0.0/16').supernet_of(ipaddress.ip_network(f'{ip}/32')):
+                return True
+            # 忽略其他私有网络地址
+            if ip_obj.is_private:
+                return True
         except ValueError:
             pass
         return False
