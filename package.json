@@ -138,9 +138,9 @@
     }
   },
   "HistoryEpisodeSort": {
-    "name": "历史记录剧集排序",
+    "name": "历史记录排序",
     "description": "根据剧集顺序对同一部电视剧的不同整理时间进行排序，解决剧集时间顺序混乱问题。",
-    "labels": "历史记录, 剧集排序, 整理",
+    "labels": "历史记录, 整理",
     "version": "1.0.0",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png",
     "author": "NasPilot",
