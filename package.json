@@ -137,6 +137,19 @@
       "v1.0.0": "PlexWarp 1.0.0 发布"
     }
   },
+  "HistoryEpisodeSort": {
+    "name": "历史记录剧集排序",
+    "description": "根据剧集顺序对同一部电视剧的不同整理时间进行排序，解决剧集时间顺序混乱问题。",
+    "labels": "历史记录, 剧集排序, 整理",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "根据剧集顺序重新排序整理时间，支持动态时间间隔计算"
+    }
+  },
   "PlexCoverModifier": {
     "name": "Plex封面修改器",
     "description": "修改Plex媒体库封面，支持自定义封面图片替换。",
