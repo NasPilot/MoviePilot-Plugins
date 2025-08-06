@@ -370,7 +370,7 @@ class HistoryEpisodeSort(_PluginBase):
         ).order_by(TransferHistory.date.asc()).all()
 
     @db_update
-    def __update_episode_date(self, history_id: int, new_date: str, db: Session):
+    def __update_episode_date(self, db: Session, history_id: int, new_date: str):
         """更新剧集的整理时间"""
         db.query(TransferHistory).filter(
             TransferHistory.id == history_id
