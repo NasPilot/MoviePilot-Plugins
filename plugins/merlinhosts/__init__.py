@@ -30,7 +30,7 @@ class MerlinHosts(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png"
     # 插件版本
-    plugin_version = "0.6"
+    plugin_version = "0.7"
     # 插件作者
     plugin_author = "NasPilot"
     # 插件作者主页
@@ -466,24 +466,15 @@ class MerlinHosts(_PluginBase):
 
     def __merge_hosts_with_local(self, local_hosts: list, remote_hosts: list) -> list:
         """
-        使用本地hosts内容覆盖远程hosts，并合并未冲突的条目，同时忽略IPv6和其他特定的本地定义
+        使用本地hosts内容覆盖远程hosts，并合并未冲突的条目，同时保留路由器原有的本地host劫持
         """
         try:
             ignore = self._ignore.split("|") if self._ignore else []
             ignore.extend(["localhost"])
 
-            # 创建远程hosts字典，适应空格或制表符分隔
-            remote_dict = {}
-            for line in remote_hosts:
-                line = line.strip()
-                if " " in line or "\t" in line:
-                    parts = re.split(r'\s+', line)
-                    if len(parts) > 1 and not line.startswith('#'):
-                        ip, hostname = parts[0], parts[1]
-                        if not self.__should_ignore_ip(ip) and hostname not in ignore and ip not in ignore:
-                            remote_dict[hostname] = f"{ip}\t{hostname}"
-
-            # 用本地hosts更新远程hosts
+            # 创建本地hosts字典，用于标识哪些域名来自本地
+            local_hostnames = set()
+            local_dict = {}
             for line in local_hosts:
                 line = line.lstrip("\ufeff").strip()
                 if line.startswith("#") or any(ign in line for ign in ignore):
@@ -493,11 +484,28 @@ class MerlinHosts(_PluginBase):
                     continue
                 ip, hostname = parts[0], parts[1]
                 if not self.__should_ignore_ip(ip) and hostname not in ignore and ip not in ignore:
-                    remote_dict[hostname] = f"{ip}\t{hostname}"
+                    local_hostnames.add(hostname)
+                    local_dict[hostname] = f"{ip}\t{hostname}"
 
-            # 组装最终的hosts列表
+            # 创建远程hosts字典，保留所有非本地覆盖的条目
+            remote_dict = {}
+            for line in remote_hosts:
+                line = line.strip()
+                if " " in line or "\t" in line:
+                    parts = re.split(r'\s+', line)
+                    if len(parts) > 1 and not line.startswith('#'):
+                        ip, hostname = parts[0], parts[1]
+                        if not self.__should_ignore_ip(ip) and hostname not in ignore and ip not in ignore:
+                            # 只有当hostname不在本地hosts中时，才保留远程的条目
+                            if hostname not in local_hostnames:
+                                remote_dict[hostname] = f"{ip}\t{hostname}"
+
+            # 合并字典：远程hosts + 本地hosts（本地hosts优先级更高）
+            merged_dict = {**remote_dict, **local_dict}
+
+            # 组装最终的hosts列表：注释行 + 合并后的hosts条目
             updated_hosts = [line.strip() for line in remote_hosts if line.strip().startswith('#')]
-            updated_hosts += [entry for entry in remote_dict.values()]
+            updated_hosts += [entry for entry in merged_dict.values()]
 
             logger.info(f"更新后的hosts为: {updated_hosts}")
             return updated_hosts
