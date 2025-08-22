@@ -28,7 +28,7 @@ class PlexWarp(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png"
     # 插件版本
-    plugin_version = "1.1.0"
+    plugin_version = "1.2.0"
     # 插件作者
     plugin_author = "NasPilot"
     # 作者主页
@@ -76,7 +76,7 @@ class PlexWarp(_PluginBase):
         # 配置文件名
         self.__config_filename = "config.yaml"
         # 二进制文件版本
-        self.__plexwarp_version = "0.1.1"
+        self.__plexwarp_version = "0.1.2"
         self.__plexwarp_version_path = (
             settings.PLUGIN_DATA_PATH / class_name / "version.txt"
         )
@@ -570,7 +570,12 @@ class PlexWarp(_PluginBase):
         Path(self.__config_path).mkdir(parents=True, exist_ok=True)
         Path(self.__logs_dir).mkdir(parents=True, exist_ok=True)
 
-        self.process = psutil.Popen([self.__plexwarp_path])
+        # 启动PlexWarp进程，指定配置文件路径
+        config_file_path = str(Path(self.__config_path / self.__config_filename))
+        self.process = psutil.Popen(
+            [self.__plexwarp_path, "-config", config_file_path],
+            cwd=str(self.__config_path.parent)
+        )
 
         if self.process.is_running():
             logger.info("PlexWarp 服务成功启动！")
