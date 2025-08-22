@@ -106,14 +106,15 @@
   },
   "MediaWarp": {
     "name": "MediaWarp",
-    "description": "Plex/Emby/Jellyfin 中间件：支持STRM播放，提供302重定向、直链播放功能。",
+    "description": "Plex/Emby/Jellyfin 中间件：支持STRM播放，提供302重定向、直链播放、路径映射、Alist集成等功能。",
     "labels": "云盘",
-    "version": "1.0.8",
+    "version": "1.1.0",
     "icon": "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/refs/heads/main/icons/cloud.png",
     "author": "DDSRem,NasPilot",
     "level": 1,
     "v2": true,
     "history": {
+      "v1.1.0": "新增strm302重定向功能，支持路径映射、Alist集成、智能重定向等高级功能",
       "V1.0.8": "增加 Plex 支持",
       "v1.0.7": "兼容 MacOS 系统",
       "v1.0.6": "再修复 URL 编码问题",
@@ -127,14 +128,15 @@
   },
   "PlexWarp": {
     "name": "PlexWarp",
-    "description": "Plex 中间件：支持STRM播放，提供302重定向、直链播放功能。",
+    "description": "Plex 中间件：支持STRM播放，提供302重定向、直链播放、路径映射、Alist集成等功能。",
     "labels": "Plex, Strm, 云盘",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png",
     "author": "NasPilot",
     "level": 1,
     "v2": true,
     "history": {
+      "v1.1.0": "新增strm302重定向功能，支持路径映射、Alist集成、智能重定向等高级功能",
       "v1.0.0": "PlexWarp 1.0.0 发布"
     }
   },
