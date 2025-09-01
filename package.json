@@ -128,14 +128,15 @@
   },
   "PlexWarp": {
     "name": "PlexWarp",
-    "description": "Plex 中间件：支持STRM播放，提供302重定向、直链播放、路径映射、Alist集成等功能。支持完整的strm302重定向配置，包括媒体路径映射、Alist服务集成、客户端过滤等高级功能。",
-    "labels": "Plex, Strm, 云盘",
-    "version": "1.3.0",
+    "description": "专注于Plex 302重定向的轻量级插件：支持STRM文件的302重定向播放，提供路径映射和符号链接管理功能。",
+    "labels": "Plex, 302重定向, STRM",
+    "version": "2.0.0",
     "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png",
     "author": "NasPilot",
     "level": 1,
     "v2": true,
     "history": {
+      "v2.0.0": "重大重构：移除PlexWarp二进制文件依赖，专注于Plex 302重定向功能，移除Emby/Jellyfin/Alist支持，简化为轻量级纯Python插件",
       "v1.3.0": "重构配置结构与PlexWarp原项目保持一致，新增Alist集成配置界面，添加路径映射功能，完善strm302重定向配置，支持客户端过滤和高级重定向选项",
       "v1.2.0": "修复插件运行异常问题，优化进程启动逻辑和配置文件处理",
       "v1.1.0": "新增strm302重定向功能，支持路径映射、Alist集成、智能重定向等高级功能",
