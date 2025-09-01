@@ -93,7 +93,7 @@ class PlexWarp(_PluginBase):
 
         if config:
             self._enabled = config.get("enabled")
-            self._port = config.get("port") or "3002"
+            self._port = config.get("port")
             self._media_strm_path = config.get("media_strm_path")
             self._mediaservers = config.get("mediaservers") or []
             self._crx = config.get("crx")
@@ -833,7 +833,7 @@ class PlexWarp(_PluginBase):
         logger.info(f"PlexWarp: 生成Plex配置 - 服务器地址: {self._server_host}, API密钥: {'已设置' if self._server_apikey else '未设置'}")
         config = {
             # 基础服务配置
-            "port": int(self._port),
+            "port": int(self._port) if self._port else 3002,
             "host": "0.0.0.0",
             
             # Plex服务器配置
@@ -933,7 +933,7 @@ class PlexWarp(_PluginBase):
         logger.info(f"PlexWarp: 生成{self._server_type.title()}配置 - 服务器地址: {self._server_host}, API密钥: {'已设置' if self._server_apikey else '未设置'}")
         config = {
             # 基础服务配置
-            "port": int(self._port),
+            "port": int(self._port) if self._port else 3002,
             "host": "0.0.0.0",
             
             # Emby/Jellyfin服务器配置
