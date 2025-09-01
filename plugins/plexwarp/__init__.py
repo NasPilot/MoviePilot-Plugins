@@ -155,7 +155,7 @@ class PlexWarp(_PluginBase):
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
 
-        plex302_config = [
+        web_ui = [
             {
                 "component": "VRow",
                 "content": [
@@ -437,36 +437,7 @@ class PlexWarp(_PluginBase):
                                     {"component": "span", "text": "Web页面配置"},
                                 ],
                             },
-                            {
-                                "component": "VTab",
-                                "props": {"value": "subtitle"},
-                                "content": [
-                                    {
-                                        "component": "VIcon",
-                                        "props": {
-                                            "icon": "mdi-sync",
-                                            "start": True,
-                                            "color": "#4CAF50",
-                                        },
-                                    },
-                                    {"component": "span", "text": "字体相关设置"},
-                                ],
-                            },
-                            {
-                                "component": "VTab",
-                                "props": {"value": "alist"},
-                                "content": [
-                                    {
-                                        "component": "VIcon",
-                                        "props": {
-                                            "icon": "mdi-cloud",
-                                            "start": True,
-                                            "color": "#FF9800",
-                                        },
-                                    },
-                                    {"component": "span", "text": "Alist配置"},
-                                ],
-                            },
+
                             {
                                 "component": "VTab",
                                 "props": {"value": "path-mapping"},
@@ -499,20 +470,7 @@ class PlexWarp(_PluginBase):
                                     }
                                 ],
                             },
-                            {
-                                "component": "VWindowItem",
-                                "props": {"value": "subtitle"},
-                                "content": [
-                                    {"component": "VCardText", "content": subtitle}
-                                ],
-                            },
-                            {
-                                "component": "VWindowItem",
-                                "props": {"value": "alist"},
-                                "content": [
-                                    {"component": "VCardText", "content": alist}
-                                ],
-                            },
+
                             {
                                 "component": "VWindowItem",
                                 "props": {"value": "path-mapping"},
@@ -529,19 +487,9 @@ class PlexWarp(_PluginBase):
             "port": "3002",
             "media_mount_paths": "",
             "mediaservers": [],
-            "crx": False,
-            "actor_plus": False,
-            "fanart_show": False,
-            "external_player_url": False,
-            "danmaku": False,
-            "video_together": False,
-            "srt2ass": False,
-            "alist_addr": "",
-            "alist_token": "",
-            "alist_sign_enable": False,
-            "alist_sign_expire": "3600",
-            "alist_public_addr": "",
             "path_mapping": "",
+            "symlink_rules": "",
+            "check_link_validity": True,
             "tab": "web-ui",
         }
 
