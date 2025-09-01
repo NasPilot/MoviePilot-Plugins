@@ -62,12 +62,8 @@ class PlexWarp(_PluginBase):
 
         if config:
             self._enabled = config.get("enabled")
-            self._port = config.get("port")
-            self._media_mount_paths = config.get("media_mount_paths")
+            self._port = config.get("port", "3002")
             self._mediaservers = config.get("mediaservers") or []
-            self._path_mapping = config.get("path_mapping")
-            self._symlink_rules = config.get("symlink_rules")
-            self._check_link_validity = config.get("check_link_validity")
 
             # 获取媒体服务器
             if self._mediaservers:
@@ -132,11 +128,7 @@ class PlexWarp(_PluginBase):
             {
                 "enabled": self._enabled,
                 "port": self._port,
-                "media_mount_paths": self._media_mount_paths,
                 "mediaservers": self._mediaservers,
-                "path_mapping": self._path_mapping,
-                "symlink_rules": self._symlink_rules,
-                "check_link_validity": self._check_link_validity,
             }
         )
 
@@ -155,109 +147,12 @@ class PlexWarp(_PluginBase):
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
 
-        web_ui = [
-            {
-                "component": "VRow",
-                "content": [
-                    {
-                        "component": "VCol",
-                        "props": {"cols": 12},
-                        "content": [
-                            {
-                                "component": "VSwitch",
-                                "props": {
-                                    "model": "check_link_validity",
-                                    "label": "链接有效性检查",
-                                    "hint": "启用链接有效性检查功能",
-                                    "persistent-hint": True,
-                                },
-                            }
-                        ],
-                    },
-                ],
-            },
-        ]
-
-        path_mapping = [
-            {
-                "component": "VRow",
-                "content": [
-                    {
-                        "component": "VCol",
-                        "props": {"cols": 12},
-                        "content": [
-                            {
-                                "component": "VTextarea",
-                                "props": {
-                                    "model": "path_mapping",
-                                    "label": "路径映射配置",
-                                    "rows": 6,
-                                    "placeholder": "/mnt/media/movies:/remote/movies\n/mnt/media/tv:/remote/tv\n/local/path:/remote/path",
-                                    "hint": "配置本地路径到远程路径的映射，一行一个映射，格式：本地路径:远程路径",
-                                    "persistent-hint": True,
-                                },
-                            }
-                        ],
-                    },
-                ],
-            },
-            {
-                "component": "VRow",
-                "content": [
-                    {
-                        "component": "VCol",
-                        "props": {"cols": 12},
-                        "content": [
-                            {
-                                "component": "VTextarea",
-                                "props": {
-                                    "model": "symlink_rules",
-                                    "label": "符号链接规则",
-                                    "rows": 4,
-                                    "placeholder": "/symlink/path:/target/path\n/another/symlink:/another/target",
-                                    "hint": "配置符号链接处理规则，一行一个规则，格式：符号链接路径:目标路径",
-                                    "persistent-hint": True,
-                                },
-                            }
-                        ],
-                    },
-                ],
-            },
-            {
-                "component": "VAlert",
-                "props": {
-                    "type": "info",
-                    "variant": "tonal",
-                    "density": "compact",
-                    "class": "mt-2",
-                },
-                "content": [
-                    {
-                        "component": "div",
-                        "text": "路径映射说明：",
-                    },
-                    {
-                        "component": "div",
-                        "text": "• 路径映射：将本地媒体库路径映射到远程存储路径",
-                    },
-                    {
-                        "component": "div",
-                        "text": "• 符号链接：处理符号链接指向的实际路径",
-                    },
-                    {
-                        "component": "div",
-                        "text": "• 格式：源路径:目标路径，每行一个映射关系",
-                    },
-                ],
-            },
-        ]
-
 
 
         return [
             {
                 "component": "VCard",
-                "props": {"variant": "outlined", "class": "mb-3"},
+                "props": {"variant": "outlined"},
                 "content": [
                     {
                         "component": "VCardTitle",
@@ -266,12 +161,12 @@ class PlexWarp(_PluginBase):
                             {
                                 "component": "VIcon",
                                 "props": {
-                                    "icon": "mdi-cog",
+                                    "icon": "mdi-play-network",
                                     "color": "primary",
                                     "class": "mr-2",
                                 },
                             },
-                            {"component": "span", "text": "基础设置"},
+                            {"component": "span", "text": "PlexWarp 配置"},
                         ],
                     },
                     {"component": "VDivider"},
@@ -293,6 +188,8 @@ class PlexWarp(_PluginBase):
                                                         "props": {
                                                             "model": "enabled",
                                                             "label": "启用插件",
+                                                            "hint": "启用Plex 302重定向功能",
+                                                            "persistent-hint": True,
                                                         },
                                                     }
                                                 ],
@@ -305,8 +202,9 @@ class PlexWarp(_PluginBase):
                                                         "component": "VTextField",
                                                         "props": {
                                                             "model": "port",
-                                                            "label": "端口",
-                                                            "hint": "反代后媒体服务器访问端口",
+                                                            "label": "服务端口",
+                                                            "type": "number",
+                                                            "hint": "Plex访问STRM文件的端口",
                                                             "persistent-hint": True,
                                                         },
                                                     }
@@ -343,139 +241,18 @@ class PlexWarp(_PluginBase):
                                 ],
                             },
                             {
-                                "component": "VRow",
-                                "content": [
-                                    {
-                                        "component": "VCol",
-                                        "props": {"cols": 12},
-                                        "content": [
-                                            {
-                                                "component": "VTextarea",
-                                                "props": {
-                                                    "model": "media_mount_paths",
-                                                    "label": "媒体挂载路径",
-                                                    "rows": 5,
-                                                    "placeholder": "/media/strm/movie\n/media/strm/tv",
-                                                    "hint": "媒体文件挂载的路径，用于302重定向，一行一个路径",
-                                                    "persistent-hint": True,
-                                                },
-                                            },
-                                        ],
-                                    }
-                                ],
-                            },
-                            {
                                 "component": "VAlert",
                                 "props": {
                                     "type": "info",
                                     "variant": "tonal",
                                     "density": "compact",
-                                    "class": "mt-2",
+                                    "class": "mt-3",
                                 },
                                 "content": [
                                     {
                                         "component": "div",
-                                        "text": "注意事项：",
+                                        "text": "💡 使用说明：配置端口后，Plex将通过该端口访问STRM文件进行302重定向播放",
                                     },
-                                    {
-                                        "component": "div",
-                                        "text": "• 如果 MoviePilot 容器为 bridge 模式，需要手动映射配置的端口",
-                                    },
-                                    {
-                                        "component": "div",
-                                        "text": "• 更多详细配置可以前往 MoviePilot 配置目录找到此插件的配置目录进行配置文件配置",
-                                    },
-                                ],
-                            },
-                            {
-                                "component": "VAlert",
-                                "props": {
-                                    "type": "success",
-                                    "variant": "tonal",
-                                    "density": "compact",
-                                    "class": "mt-2",
-                                },
-                                "content": [
-                                    {
-                                        "component": "div",
-                                        "text": "支持的 STRM 文件类型：",
-                                    },
-                                    {
-                                        "component": "div",
-                                        "text": "• 115网盘STRM助手、123云盘STRM助手、CloudMediaSync",
-                                    },
-                                    {
-                                        "component": "div",
-                                        "text": "• OneStrm、Symedia、q115-strm 等软件生成的 STRM 文件",
-                                    },
-                                ],
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                "component": "VCard",
-                "props": {"variant": "outlined"},
-                "content": [
-                    {
-                        "component": "VTabs",
-                        "props": {"model": "tab", "grow": True, "color": "primary"},
-                        "content": [
-                            {
-                                "component": "VTab",
-                                "props": {"value": "web-ui"},
-                                "content": [
-                                    {
-                                        "component": "VIcon",
-                                        "props": {
-                                            "icon": "mdi-file-move-outline",
-                                            "start": True,
-                                            "color": "#1976D2",
-                                        },
-                                    },
-                                    {"component": "span", "text": "Web页面配置"},
-                                ],
-                            },
-
-                            {
-                                "component": "VTab",
-                                "props": {"value": "path-mapping"},
-                                "content": [
-                                    {
-                                        "component": "VIcon",
-                                        "props": {
-                                            "icon": "mdi-folder-swap",
-                                            "start": True,
-                                            "color": "#9C27B0",
-                                        },
-                                    },
-                                    {"component": "span", "text": "路径映射"},
-                                ],
-                            },
-                        ],
-                    },
-                    {"component": "VDivider"},
-                    {
-                        "component": "VWindow",
-                        "props": {"model": "tab"},
-                        "content": [
-                            {
-                                "component": "VWindowItem",
-                                "props": {"value": "web-ui"},
-                                "content": [
-                                    {
-                                        "component": "VCardText",
-                                        "content": web_ui,
-                                    }
-                                ],
-                            },
-
-                            {
-                                "component": "VWindowItem",
-                                "props": {"value": "path-mapping"},
-                                "content": [
-                                    {"component": "VCardText", "content": path_mapping}
                                 ],
                             },
                         ],
@@ -485,12 +262,7 @@ class PlexWarp(_PluginBase):
         ], {
             "enabled": False,
             "port": "3002",
-            "media_mount_paths": "",
             "mediaservers": [],
-            "path_mapping": "",
-            "symlink_rules": "",
-            "check_link_validity": True,
-            "tab": "web-ui",
         }
 
     def get_page(self) -> List[dict]:
@@ -503,9 +275,73 @@ class PlexWarp(_PluginBase):
         if not self._enabled:
             return
 
-        logger.info("PlexWarp插件已启用，专注于Plex 302重定向功能")
-        # 这里可以添加302重定向相关的初始化逻辑
-        # 例如：验证路径映射配置、检查符号链接等
+        logger.info("PlexWarp插件已启用，启动Plex 302重定向服务")
+        
+        try:
+            # 启动HTTP服务器用于302重定向
+            self._start_redirect_server()
+        except Exception as e:
+            logger.error(f"PlexWarp服务启动失败: {e}")
+
+    def _start_redirect_server(self):
+        """
+        启动302重定向服务器
+        """
+        from flask import Flask, request, redirect, abort
+        import threading
+        import os
+        
+        app = Flask(__name__)
+        
+        @app.route('/<path:file_path>')
+        def redirect_strm(file_path):
+            """
+            处理STRM文件的302重定向
+            """
+            try:
+                # 解码文件路径
+                from urllib.parse import unquote
+                decoded_path = unquote(file_path)
+                
+                logger.info(f"PlexWarp: 收到重定向请求 - {decoded_path}")
+                
+                # 检查文件是否存在
+                if not os.path.exists(decoded_path):
+                    logger.warning(f"PlexWarp: 文件不存在 - {decoded_path}")
+                    abort(404)
+                
+                # 读取STRM文件内容
+                if decoded_path.endswith('.strm'):
+                    with open(decoded_path, 'r', encoding='utf-8') as f:
+                        redirect_url = f.read().strip()
+                    
+                    if redirect_url:
+                        logger.info(f"PlexWarp: 302重定向到 - {redirect_url}")
+                        return redirect(redirect_url, code=302)
+                    else:
+                        logger.warning(f"PlexWarp: STRM文件内容为空 - {decoded_path}")
+                        abort(404)
+                else:
+                    # 非STRM文件，直接返回404
+                    logger.warning(f"PlexWarp: 非STRM文件 - {decoded_path}")
+                    abort(404)
+                    
+            except Exception as e:
+                logger.error(f"PlexWarp: 处理重定向请求失败 - {e}")
+                abort(500)
+        
+        # 在后台线程中启动Flask服务器
+        def run_server():
+            try:
+                port = int(self._port) if self._port else 3002
+                logger.info(f"PlexWarp: 启动HTTP服务器，端口: {port}")
+                app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+            except Exception as e:
+                logger.error(f"PlexWarp: HTTP服务器启动失败 - {e}")
+        
+        self._server_thread = threading.Thread(target=run_server, daemon=True)
+        self._server_thread.start()
+        logger.info(f"PlexWarp: 302重定向服务已启动，监听端口 {self._port}")
 
 
 
@@ -517,4 +353,12 @@ class PlexWarp(_PluginBase):
         """
         停止服务
         """
+        try:
+            if hasattr(self, '_scheduler') and self._scheduler:
+                self._scheduler.shutdown()
+                self._scheduler = None
+                logger.info("PlexWarp: 调度器已停止")
+        except Exception as e:
+            logger.error(f"PlexWarp: 停止调度器失败 - {e}")
+        
         logger.info("PlexWarp插件已停止")
