@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- 数据库图标 -->
+  <ellipse cx="12" cy="5" rx="9" ry="3"/>
+  <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+  <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
+  
+  <!-- 导入导出箭头 -->
+  <path d="M8 15l-3-3 3-3" stroke="#4CAF50" stroke-width="2.5"/>
+  <path d="M16 9l3 3-3 3" stroke="#2196F3" stroke-width="2.5"/>
+  
+  <!-- 文件图标 -->
+  <rect x="6" y="2" width="4" height="6" rx="1" fill="#FF9800" opacity="0.7"/>
+  <rect x="14" y="16" width="4" height="6" rx="1" fill="#9C27B0" opacity="0.7"/>
+</svg>

@@ -1,0 +1,193 @@
+{
+  "SmartIdentifier": {
+    "name": "智能识别词",
+    "description": "增强媒体识别功能，从整理记录中提取识别词。",
+    "labels": "识别, 订阅",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/identifier.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "从媒体整理记录提取识别词"
+    }
+  },
+  "PlexMediaCover": {
+    "name": "Plex媒体封面",
+    "description": "自动更新Plex媒体库的封面图片，支持仪表盘展示。",
+    "labels": "封面, 媒体库, 仪表盘",
+    "version": "0.3.1",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v0.3.1": "修复Plex API调用错误",
+      "v0.3.0": "新增仪表盘功能，支持在仪表盘中展示媒体库封面",
+      "v0.2.0": "支持Plex媒体的封面图片自动获取",
+      "v0.1.0": "支持Plex媒体的封面图片自动获取"
+    }
+  },
+  "PlexPersonMeta": {
+    "name": "Plex演职人员刮削",
+    "description": "实现刮削演职人员中文名称及角色。",
+    "labels": "Plex,刮削",
+    "version": "2.1",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexpersonmeta.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v2.1": "修复MoviePilot缓存接口变更导致的接口兼容性问题",
+      "v2.0": "兼容MoviePilot的Redis缓存方案，需要MoviePilot v2.2.3+",
+      "v1.9": "修复了入库执行一次失效的问题",
+      "v1.8": "优化执行周期输入，需要MoviePilot v2.2.1+",
+      "v1.7": "MoviePilot V2 版本Plex演职人员刮削插件"
+    }
+  },
+  "SmartRename": {
+    "name": "智能重命名",
+    "description": "提供智能文件重命名功能。",
+    "labels": "重命名, 整理",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/rename.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "提供智能文件重命名功能"
+    }
+  },
+  "AdaptiveIntroSkip": {
+    "name": "自适应IntroSkip",
+    "description": "通过用户的暂停与播放动作，批量标记片头片尾",
+    "labels": "片头片尾, 批量标记",
+    "version": "1.7.8",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/chapter.png",
+    "author": "honue",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.7.8": "修复了一些已知问题",
+      "v1.7": "fix: 新入库剧集标记片头的一些错误，如遇到问题请重置插件。",
+      "v1.6": "(火柴总定制版)",
+      "v1.5": "时间支持 分:秒 格式",
+      "v1.4": "增加用户事件筛选"
+    }
+  },
+  "MerlinHosts": {
+    "name": "梅林路由Hosts",
+    "description": "同步本地Hosts至梅林固件的/jffs/configs/hosts.add文件。",
+    "labels": "Hosts, 路由, Merlin",
+    "version": "0.7",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/merlin.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v0.7": "修复本地hosts劫持问题，保留路由器现有hosts条目，避免删除手动设置的本地劫持配置。",
+      "v0.6": "优化hosts处理逻辑，采用本地优先策略，保留注释和智能过滤，优化合并策略和代码结构。",
+      "v0.5": "新增moviepilot域名过滤功能，避免同步本地moviepilot相关hosts条目到路由器。",
+      "v0.4": "增强SFTP连接稳定性，解决文件写入EOF错误，新增SFTP重试机制和备用写入方案。",
+      "v0.3": "增强SSH连接稳定性，解决EOF错误，新增重试机制和多种私钥格式支持。",
+      "v0.2": "新增智能合并功能，保留路由器现有hosts条目，优化同步策略和代码结构。",
+      "v0.1": "初始版本, 支持同步Hosts到梅林路由并重启dnsmasq。"
+    }
+  },
+  "TransWord": {
+    "name": "识别词生成器",
+    "description": "根据手动整理时填写的电视剧参数生成自定义识别词，支持集数偏移、替换词等功能。",
+    "labels": "识别词, 电视剧, 整理, 工具",
+    "version": "0.2",
+    "icon": "words.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v0.2": "修复插件导入错误，确保与 MoviePilot 最新版本兼容",
+      "v0.1": "根据电视剧参数生成识别词，支持集数偏移、替换词、屏蔽词等多种格式"
+    }
+  },
+  "MediaWarp": {
+    "name": "MediaWarp",
+    "description": "Plex/Emby/Jellyfin 中间件：支持STRM播放，提供302重定向、直链播放、路径映射、Alist集成等功能。",
+    "labels": "云盘",
+    "version": "1.0.9",
+    "icon": "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/refs/heads/main/icons/cloud.png",
+    "author": "DDSRem,NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.9": "更新优化Plex的strm302重定向功能",
+      "V1.0.8": "增加 Plex 支持",
+      "v1.0.7": "兼容 MacOS 系统",
+      "v1.0.6": "再修复 URL 编码问题",
+      "v1.0.5": "修复 URL 编码问题",
+      "v1.0.4": "修复配置缺失",
+      "v1.0.3": "修复afusekt播放器无法播放",
+      "v1.0.2": "下载使用MP代理",
+      "v1.0.1": "兼容更多友商STRM文件地址，修复STRM地址编码错误",
+      "v1.0.0": "发布"
+    }
+  },
+  "PlexWarp": {
+    "name": "PlexWarp",
+    "description": "专注于Plex 302重定向的轻量级插件：支持STRM文件的302重定向播放，提供路径映射和符号链接管理功能。",
+    "labels": "Plex, 302重定向, STRM",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexwarp.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v2.0.0": "重大重构：移除PlexWarp二进制文件依赖，专注于Plex 302重定向功能，移除Emby/Jellyfin/Alist支持，简化为轻量级纯Python插件",
+      "v1.3.0": "重构配置结构与PlexWarp原项目保持一致，新增Alist集成配置界面，添加路径映射功能，完善strm302重定向配置，支持客户端过滤和高级重定向选项",
+      "v1.2.0": "修复插件运行异常问题，优化进程启动逻辑和配置文件处理",
+      "v1.1.0": "新增strm302重定向功能，支持路径映射、Alist集成、智能重定向等高级功能",
+      "v1.0.0": "PlexWarp 1.0.0 发布"
+    }
+  },
+  "HistoryEpisodeSort": {
+    "name": "历史记录排序",
+    "description": "同一部电视剧的不同剧集按正确的时间顺序重新排序。",
+    "labels": "历史记录, 整理",
+    "version": "1.0.4",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historysort.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.4": "修复UI页面显示错误，添加页面路由和HTML响应处理",
+      "v1.0.3": "修复数据库更新方法参数错误，解决剧集排序失败问题",
+      "v1.0.2": "增加UI管理界面，支持手动选择排序、立即运行和时间修改功能",
+      "v1.0.1": "修复了一些已知问题",
+      "v1.0.0": "根据剧集顺序重新排序整理时间，支持动态时间间隔计算"
+    }
+  },
+  "HistoryImportExport": {
+    "name": "历史记录导入导出",
+    "description": "支持按电视剧分别导出历史记录，并可按剧集顺序重新排列时间后导入。",
+    "labels": "历史记录, 导入导出, 备份",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/historyimport.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "支持历史记录导入导出，按电视剧分别导出，支持按剧集顺序重新排列时间"
+    }
+  },
+  "PlexCoverModifier": {
+    "name": "Plex封面修改器",
+    "description": "修改Plex媒体库封面，支持自定义封面图片替换。",
+    "labels": "Plex, 封面, 媒体库",
+    "version": "1.0.0",
+    "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexcover.png",
+    "author": "NasPilot",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0.0": "初始版本，支持自定义Plex媒体库封面替换"
+    }
+  }
+}
