@@ -1,4 +1,20 @@
 {
+    "PlexPersonMeta": {
+        "name": "Plex演职人员刮削",
+        "description": "实现刮削演职人员中文名称及角色。",
+        "labels": "Plex,刮削",
+        "version": "2.1",
+        "icon": "https://raw.githubusercontent.com/NasPilot/MoviePilot-Plugins/main/icons/plexpersonmeta.png",
+        "author": "InfinityPacer (维护: NasPilot)",
+        "level": 1,
+        "history": {
+            "v2.1": "插件迁移至NasPilot存储库维护，修复缓存导入兼容性问题",
+            "v2.0": "兼容MoviePilot的Redis缓存方案，需要MoviePilot v2.2.3+",
+            "v1.9": "修复了入库执行一次失效的问题",
+            "v1.8": "优化执行周期输入，需要MoviePilot v2.2.1+",
+            "v1.7": "MoviePilot V2 版本Plex演职人员刮削插件"
+        }
+    },
     "P115StrmHelper": {
         "name": "115网5盘STRM助手",
         "description": "115网盘STRM生成一站式服务",
